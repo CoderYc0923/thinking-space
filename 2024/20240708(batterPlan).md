@@ -7,5 +7,5 @@
 2. 需要每天学习AR以及AI相关的知识。
 
 **并且每周进行周记（记录在batterPlanWeeklyReport文件夹下）**
-**AI副业赚钱资讯合集**
-https://github.com/bleedline/aimoneyhunter
+**Unity Documentation**
+https://docs.unity3d.com/cn/2023.2/Manual/UnityManual.html
