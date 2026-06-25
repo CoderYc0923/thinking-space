@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 全栈学习进度看板</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --text: #c9d1d9;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #d2991d;
+    --purple: #a371f7;
+    --red: #f85149;
+    --pink: #db61a2;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 20px 60px; }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 32px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header .subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-top: 6px;
+  }
+  .header .tech-stack {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .tech-stack .badge {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 0.85rem;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* Overall progress */
+  .overall-progress {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .overall-progress .ring {
+    flex-shrink: 0;
+    width: 72px;
+    height: 72px;
+  }
+  .overall-progress .ring circle {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: center;
+    transition: stroke-dashoffset 0.4s ease;
+  }
+  .ring-bg { stroke: var(--border); }
+  .ring-fg { stroke: var(--green); }
+  .progress-info .percent {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--green);
+  }
+  .progress-info .detail {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 2px;
+  }
+  .reset-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .reset-btn:hover {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  /* Stage card */
+  .stage {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .stage.completed { border-color: var(--green); }
+  .stage-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .stage-header:hover { background: rgba(255,255,255,0.02); }
+  .stage-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+  .stage-num.s1 { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .stage-num.s2 { background: rgba(163,113,247,0.15); color: var(--purple); }
+  .stage-num.s3 { background: rgba(210,153,29,0.15); color: var(--orange); }
+  .stage-num.s4 { background: rgba(219,97,162,0.15); color: var(--pink); }
+  .stage-num.s5 { background: rgba(63,185,80,0.15); color: var(--green); }
+
+  .stage-title-area { flex: 1; min-width: 0; }
+  .stage-title {
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+  .stage-meta {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .stage-progress-bar {
+    width: 120px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .stage-progress-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+  .stage-arrow {
+    color: var(--muted);
+    font-size: 1.2rem;
+    transition: transform 0.3s;
+    flex-shrink: 0;
+  }
+  .stage.open .stage-arrow { transform: rotate(180deg); }
+
+  .stage-body {
+    display: none;
+    padding: 0 20px 20px;
+  }
+  .stage.open .stage-body { display: block; }
+
+  /* Module table */
+  .module-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .module-table th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .module-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(42,45,58,0.5);
+    font-size: 0.93rem;
+    vertical-align: middle;
+  }
+  .module-table tr:last-child td { border-bottom: none; }
+  .module-table tr:hover td { background: rgba(255,255,255,0.015); }
+  .module-table tr.done td { opacity: 0.6; }
+  .module-table tr.done td.name { text-decoration: line-through; color: var(--muted); }
+
+  /* Custom checkbox */
+  .cb {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .cb:hover { border-color: var(--accent); }
+  .cb.checked {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .cb.checked::after {
+    content: '✓';
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .note {
+    display: inline-block;
+    font-size: 0.78rem;
+    color: var(--purple);
+    background: rgba(163,113,247,0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 6px;
+  }
+
+  @media (max-width: 640px) {
+    .header h1 { font-size: 1.5rem; }
+    .overall-progress { flex-wrap: wrap; justify-content: center; text-align: center; }
+    .reset-btn { margin-left: 0; width: 100%; }
+    .stage-progress-bar { width: 60px; }
+    .module-table th:nth-child(3), .module-table td:nth-child(3) { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>🧠 AI 全栈学习进度看板</h1>
+    <p class="subtitle">数据库运维 · 服务器部署 · AI 工程化</p>
+    <div class="tech-stack">
+      <span class="badge">☕ Java</span>
+      <span class="badge">🟢 Node.js</span>
+      <span class="badge">🐳 Docker</span>
+      <span class="badge">☸️ K8s</span>
+      <span class="badge">🐘 PostgreSQL</span>
+      <span class="badge">🔴 Redis</span>
+    </div>
+  </div>
+
+  <div class="overall-progress">
+    <svg class="ring" viewBox="0 0 72 72">
+      <circle class="ring-bg" cx="36" cy="36" r="30"/>
+      <circle class="ring-fg" id="ring-fg" cx="36" cy="36" r="30" stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
+      <text x="36" y="40" text-anchor="middle" fill="#c9d1d9" font-size="16" font-weight="700" id="ring-text">0%</text>
+    </svg>
+    <div class="progress-info">
+      <div class="percent" id="overall-percent">0%</div>
+      <div class="detail">已完成 <span id="done-count">0</span> / <span id="total-count">0</span> 项</div>
+    </div>
+    <button class="reset-btn" onclick="resetAll()">🔄 重置进度</button>
+  </div>
+
+  <div id="stages"></div>
+
+</div>
+
+<script>
+const stages = [
+  {
+    id: 's1',
+    num: '一',
+    numClass: 's1',
+    title: '基本功夯实',
+    duration: '约 2-3 周',
+    modules: [
+      { name: 'Linux 基础（Shell命令、权限、systemd、日志、cron）', tools: 'Ubuntu Server' },
+      { name: '网络基础（TCP/HTTP深入、反向代理、防火墙、SSL/TLS）', tools: 'Nginx' },
+      { name: '容器入门（Dockerfile、docker-compose、卷挂载、网络）', tools: 'Docker + Compose' },
+      { name: '版本控制深化（Git Flow、分支策略、CI/CD概念）', tools: 'Git + GitHub' },
+    ]
+  },
+  {
+    id: 's2',
+    num: '二',
+    numClass: 's2',
+    title: '数据库运维深耕',
+    duration: '约 3-4 周',
+    modules: [
+      { name: 'PostgreSQL（安装配置、备份恢复、慢查询、连接池）', tools: 'PgBouncer', note: 'Java: MyBatis | Node: Prisma' },
+      { name: 'MySQL/MariaDB（主从复制、读写分离、binlog备份）', tools: 'mysqldump', note: 'Java: JDBC | Node: mysql2' },
+      { name: 'Redis（持久化RDB/AOF、哨兵、Cluster、缓存策略）', tools: 'ioredis / Lettuce', note: 'AI场景高频' },
+      { name: '向量数据库（Milvus/Qdrant部署、索引调优、向量检索）', tools: 'Milvus / Qdrant', note: 'AI核心' },
+    ]
+  },
+  {
+    id: 's3',
+    num: '三',
+    numClass: 's3',
+    title: '部署与持续交付',
+    duration: '约 3-4 周',
+    modules: [
+      { name: '手动部署（Nginx反向代理、SSL证书、CDN）', tools: 'Nginx + acme.sh' },
+      { name: '容器化部署（多阶段构建、镜像瘦身、健康检查）', tools: 'Docker Compose' },
+      { name: 'K8s编排入门（Pod/Deploy/Service/Ingress/滚动更新）', tools: 'Kubernetes' },
+      { name: 'CI/CD流水线（自动构建→测试→部署）', tools: 'GitHub Actions' },
+      { name: 'Java专属（jar构建、JVM调优、GC日志、Actuator）', tools: 'Maven/Gradle', note: 'Java' },
+      { name: 'Node专属（PM2进程管理、cluster模式、内存排查）', tools: 'PM2 + artillery', note: 'Node' },
+    ]
+  },
+  {
+    id: 's4',
+    num: '四',
+    numClass: 's4',
+    title: 'AI 工程化部署',
+    duration: '约 3-4 周',
+    modules: [
+      { name: '模型服务化（FastAPI/Triton部署，Java/Node调用）', tools: 'FastAPI / Triton' },
+      { name: 'GPU服务器（NVIDIA Driver、CUDA、nvidia-docker）', tools: 'CUDA + cuDNN' },
+      { name: '推理加速（ONNX Runtime、TensorRT、模型量化）', tools: 'ONNX / TensorRT' },
+      { name: '大模型部署（vLLM/Ollama部署、流式输出）', tools: 'vLLM / Ollama' },
+      { name: '向量检索服务（Milvus集群、索引选型、召回调优）', tools: 'Milvus Cluster' },
+      { name: 'RAG管线（LangChain后端与Java/Node服务集成）', tools: 'LangChain / LlamaIndex' },
+    ]
+  },
+  {
+    id: 's5',
+    num: '五',
+    numClass: 's5',
+    title: '可观测性与运维保障',
+    duration: '持续学习',
+    modules: [
+      { name: '监控告警（Prometheus + Grafana + AlertManager）', tools: 'Prometheus' },
+      { name: '日志收集（ELK 或 Loki + Grafana）', tools: 'ELK / Loki' },
+      { name: '链路追踪（Jaeger / OpenTelemetry）', tools: 'OpenTelemetry' },
+      { name: '压力测试（wrk / k6 / JMeter）', tools: 'k6 + JMeter' },
+      { name: '混沌工程（Chaos Mesh）', tools: 'Chaos Mesh (K8s)' },
+    ]
+  }
+];
+
+const STORAGE_KEY = 'ai-fullstack-tracker-progress';
+let progress = {};
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) progress = JSON.parse(raw);
+  } catch(e) { progress = {}; }
+}
+
+function saveProgress() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+
+function isChecked(stageId, idx) {
+  return progress[`${stageId}-${idx}`] === true;
+}
+
+function toggleModule(stageId, idx) {
+  const key = `${stageId}-${idx}`;
+  progress[key] = !progress[key];
+  saveProgress();
+  renderAll();
+}
+
+function resetAll() {
+  if (confirm('确定要重置所有学习进度吗？此操作不可恢复。')) {
+    progress = {};
+    saveProgress();
+    renderAll();
+  }
+}
+
+function renderAll() {
+  let totalDone = 0;
+  let totalItems = 0;
+
+  const stagesHtml = stages.map(stage => {
+    const stageKey = stage.id;
+    let stageDone = 0;
+    let stageTotal = stage.modules.length;
+    totalItems += stageTotal;
+
+    const rows = stage.modules.map((mod, idx) => {
+      const done = isChecked(stageKey, idx);
+      if (done) stageDone++;
+      return `
+        <tr class="${done ? 'done' : ''}">
+          <td style="width:34px;">
+            <span class="cb ${done ? 'checked' : ''}" onclick="toggleModule('${stageKey}',${idx})"></span>
+          </td>
+          <td class="name">${mod.name}${mod.note ? `<span class="note">${mod.note}</span>` : ''}</td>
+          <td style="color:var(--muted);font-size:0.85rem;">${mod.tools}</td>
+        </tr>`;
+    }).join('');
+
+    totalDone += stageDone;
+    const stagePercent = Math.round((stageDone / stageTotal) * 100);
+    const isStageDone = stageDone === stageTotal;
+
+    return `
+      <div class="stage ${isStageDone ? 'completed' : ''}" id="stage-${stageKey}">
+        <div class="stage-header" onclick="document.getElementById('stage-${stageKey}').classList.toggle('open')">
+          <div class="stage-num ${stage.numClass}">${stage.num}</div>
+          <div class="stage-title-area">
+            <div class="stage-title">阶段${stage.num}：${stage.title}</div>
+            <div class="stage-meta">${stage.duration} · ${stageDone}/${stageTotal} 项</div>
+          </div>
+          <div class="stage-progress-bar">
+            <div class="stage-progress-fill" style="width:${stagePercent}%"></div>
+          </div>
+          <span class="stage-arrow">▼</span>
+        </div>
+        <div class="stage-body">
+          <table class="module-table">
+            <thead><tr><th></th><th>学习内容</th><th>推荐工具</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('stages').innerHTML = stagesHtml;
+
+  // Update overall stats
+  const overallPercent = totalItems > 0 ? Math.round((totalDone / totalItems) * 100) : 0;
+  document.getElementById('overall-percent').textContent = overallPercent + '%';
+  document.getElementById('done-count').textContent = totalDone;
+  document.getElementById('total-count').textContent = totalItems;
+
+  // Update ring
+  const circumference = 188.5;
+  const offset = circumference - (overallPercent / 100) * circumference;
+  document.getElementById('ring-fg').style.strokeDashoffset = offset;
+  document.getElementById('ring-text').textContent = overallPercent + '%';
+
+  // Open first incomplete stage by default
+  let opened = false;
+  stages.forEach(s => {
+    const el = document.getElementById('stage-' + s.id);
+    if (!opened) {
+      const stageDone = s.modules.filter((_, i) => isChecked(s.id, i)).length;
+      if (stageDone < s.modules.length) {
+        el.classList.add('open');
+        opened = true;
+      }
+    }
+  });
+}
+
+loadProgress();
+renderAll();
+</script>
+</body>
+</html>
