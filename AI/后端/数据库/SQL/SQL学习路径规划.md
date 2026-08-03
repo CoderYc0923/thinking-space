@@ -188,6 +188,437 @@
 
 ------
 
+# MySQL 进阶路线【方案 A】完整规划
+
+承接前面 20 天 SQL 基础，接下来进入 **MySQL 运维 + 底层原理 + 工程实战（后端面试重中之重）**
+
+整体分为 5 个阶段，我按天拆分，你可以循序渐进学习：
+
+> 前置基础：SQL、索引、事务隔离级别、锁机制、Explain 调优你已经学完
+>
+> 环境：MySQL 8.0 InnoDB
+
+## 整体学习大纲预览
+
+第 21～22 天：慢查询日志 + 全方位 SQL 调优实战（工程落地）
+
+第 23～24 天：Binlog 详细原理、三大格式、数据恢复、Canal 同步
+
+第 25～26 天：主从复制原理、搭建、延迟问题、读写分离
+
+第 27～28 天：分库分表（Sharding-JDBC 核心）、分片策略、痛点
+
+第 29～30 天：InnoDB 底层深度：Buffer Pool、Undo Log、Redo Log、崩溃恢复
+
+第 31 天：MySQL 常见线上故障汇总 + 面试高频真题复盘
+
+# 第 21～22 天：慢查询日志 + 线上 SQL 深度调优实战
+
+## 第 21 天：慢查询日志、性能监控工具
+
+### 1. 慢查询核心参数
+
+ini
+
+
+
+
+
+
+
+```
+slow_query_log = ON                # 开启慢日志
+slow_query_log_file = slow.log     # 日志文件路径
+long_query_time = 1                # 阈值，超过1s判定为慢SQL
+log_queries_not_using_indexes = ON # 记录没有走索引的SQL
+```
+
+在线动态开启（无需重启数据库）
+
+sql
+
+
+
+
+
+
+
+```
+SET GLOBAL slow_query_log = 1;
+SET GLOBAL long_query_time = 1;
+```
+
+> 注意：global 参数新开会话生效，当前会话不生效。
+
+### 2. 日志分析工具
+
+1. **mysqldumpslow**（MySQL 自带）
+
+bash
+
+
+
+
+
+
+
+```
+# 统计耗时最多的10条SQL
+mysqldumpslow -s t -t 10 slow.log
+```
+
+参数：
+
+- -s t：按执行时间排序
+- -s c：按执行次数排序
+
+1. 第三方：pt-query-digest（Percona Toolkit，生产主流）
+
+### 3. Performance Schema / show profile
+
+定位 SQL 内部耗时，查看 CPU、IO、锁等待
+
+sql
+
+
+
+
+
+
+
+```
+SET profiling = 1;
+-- 执行你的SQL
+SHOW PROFILE;
+```
+
+### 4. Show Processlist
+
+实时查看连接、正在执行 SQL、锁阻塞
+
+sql
+
+
+
+
+
+
+
+```
+SHOW FULL PROCESSLIST;
+```
+
+重点字段：`STATE`
+
+`Waiting for table metadata lock` 元数据锁阻塞
+
+`Waiting for row lock` 等待行锁
+
+## 第 22 天：线上综合调优实战（结合前面 Explain、索引）
+
+### 1. 元数据锁 MDL（高频线上坑）
+
+✅核心知识点：
+
+MySQL5.7/8.0，**DML/SELECT 也会申请 MDL 读锁；DDL 申请 MDL 写锁**
+
+MDL 锁：事务结束才释放，不是语句结束！
+
+经典事故场景：
+
+sql
+
+
+
+
+
+
+
+```
+#会话1：开启事务执行一条select，不提交（持有MDL读锁）
+BEGIN;
+SELECT * FROM student WHERE id=1;
+
+#会话2：执行ALTER TABLE 阻塞！等待MDL写锁
+
+#会话3：后续所有查询本表SQL全部排队阻塞 → 雪崩
+```
+
+解决方案：
+
+\1. 业务低峰执行 DDL
+
+\2. 使用 pt-online-schema-change /gh-ost **在线无锁改表**
+
+### 2. 大事务风险
+
+危害：
+
+- 锁持有时间变长，容易死锁、阻塞
+
+- Undo 日志膨胀
+
+- Binlog 过大，主从延迟飙升
+
+  
+
+  优化原则：事务尽量小，避免一次性大批量更新
+
+### 3. 批量 SQL 优化
+
+❌循环逐条 insert（Java 循环 insert）
+
+✅改成批量 INSERT INTO VALUES (),(),();
+
+✅大量数据使用 LOAD DATA
+
+### 4. IN 查询优化
+
+IN 内元素过多（>1000）性能下滑，拆分多次查询
+
+避免 NOT IN（容易 NULL 引发诡异结果，优先 NOT EXISTS）
+
+### 配套作业
+
+1. 写出开启慢查询的参数，mysqldumpslow 常用命令
+2. 解释 MDL 锁引发雪崩的场景，如何规避？
+3. 什么情况下不建议使用`SELECT *`，写出两点理由
+
+------
+
+# 第 23～24 天：Binlog 原理、数据恢复、Canal 同步
+
+## 第 23 天 Binlog 基础
+
+### 1. Binlog 是什么
+
+二进制日志，**Server 层日志**，与存储引擎无关；
+
+记录所有 DML/DDL 修改数据的操作；
+
+两大作用：
+
+1. 主从复制
+2. 数据误删恢复
+
+> 区分：Redo Log/Undo Log 是 InnoDB 引擎层日志
+
+### 2. Binlog 三种格式（面试必考）
+
+1. STATEMENT
+
+   ：记录原始 SQL 语句
+
+   
+
+   缺点：函数、随机语句，从库执行结果和主库不一致，
+
+   不推荐
+
+2. ROW（行模式，线上默认推荐）
+
+   
+
+   记录变更前后每行数据，精准；缺点：日志体积大
+
+3. **MIXED**：混合模式，自动选择 statement/row
+
+ini
+
+
+
+
+
+
+
+```
+binlog_format = ROW
+```
+
+### 3. Binlog 基础操作
+
+sql
+
+
+
+
+
+
+
+```
+SHOW BINARY LOGS; #查看binlog文件
+SHOW BINLOG EVENTS IN 'binlog.000101';
+```
+
+命令行工具解析 binlog
+
+bash
+
+
+
+
+
+
+
+```
+mysqlbinlog binlog.000101
+```
+
+## 第 24 天：数据恢复 + Canal 原理
+
+### 1. 误删数据恢复流程
+
+前提：开启 binlog
+
+\1. 找到备份基线
+
+\2. 通过 mysqlbinlog 抓取时间段内 binlog
+
+\3. 重放日志恢复数据
+
+> 生产规范：定期全量备份 + binlog，实现任意时间点恢复 (PITR)
+
+### 2. Canal 核心原理
+
+Canal 模拟 MySQL 从库，伪装 slave，接收主库推送的 Binlog；
+
+解析 Binlog，把数据变更投递到 MQ (RocketMQ/Kafka)。
+
+典型场景：
+
+- MySQL 数据同步 Elasticsearch
+- 缓存更新（Redis）
+- 异地多库同步
+- 业务数据变更审计
+
+### 思考题
+
+1. Binlog 和 Redo Log 的区别？
+2. ROW 格式 Binlog 相比 STATEMENT 优势是什么？
+
+------
+
+# 第 25～26 天：主从复制、读写分离
+
+## 第 25 天：主从复制原理
+
+### 三线程模型
+
+1. Master：Binlog Dump 线程
+2. Slave：IO 线程（拉取 binlog 写入 relay log）
+3. Slave：SQL 线程（新版本支持并行复制，执行 relay log）
+
+复制拓扑：
+
+一主一从、一主多从、级联复制
+
+### 同步模式
+
+1. 异步复制（默认）：主写完直接返回，不等从库
+2. 半同步复制：主至少等待一个从库接收 Binlog，提升数据安全
+
+## 第 26 天：主从延迟、读写分离
+
+### 1. 主从延迟常见原因
+
+- 从库单线程执行 SQL（老版本）
+- 大事务、大批量 DML
+- 从库硬件性能弱于主库
+- 网络延迟
+
+### 2. 读写分离方案
+
+- 应用层：Sharding-JDBC
+
+- 中间件：MyCat、ProxySQL
+
+  
+
+  ⚠️经典坑：读从库读到旧数据（主从延迟）
+
+  
+
+  解决方案：
+
+1. 重要一致性查询强制走主库
+2. 业务容忍短暂延迟
+
+# 第 27～28 天：分库分表（互联网必备）
+
+## 第 27 天 分片基础
+
+什么时候需要分表？
+
+单表数据量 **千万级别** 开始考虑（无绝对标准，取决于查询压力）
+
+### 两种拆分方式
+
+1. **垂直拆分**：按字段拆分（大字段单独一张表）
+2. **水平拆分**：按行拆分，多张表结构一致
+
+### 分片策略
+
+- 范围分片：id 1~100000 表 1，100001~200000 表 2
+
+- Hash 分片：user_id % 分片数量（最常用）
+
+  
+
+  优缺点对比
+
+## 第 28 天 分库分表痛点（面试高频）
+
+1. **跨分片 JOIN 极其麻烦，尽量避免**
+2. 分布式事务难题
+3. 分页、排序、聚合复杂
+4. 全局唯一 ID 方案（雪花算法、号段模式）
+
+主流中间件：**Sharding-JDBC（首选，客户端）**、MyCat
+
+# 第 29～30 天 InnoDB 底层三大日志深度剖析（面试压轴）
+
+## 核心三件套：Redo Log、Undo Log、Buffer Pool
+
+1. **Buffer Pool**：内存缓存页，减少磁盘 IO；LRU 淘汰策略
+
+2. Redo Log（重做日志）
+
+   
+
+   崩溃恢复核心；先写日志，后刷盘 (WAL 机制)
+
+3. Undo Log（回滚日志）
+
+   
+
+   事务回滚、MVCC 多版本快照依赖
+
+### MVCC 完整原理串联
+
+隔离级别、Read View、事务 ID、undo 版本链，
+
+解释：RC 和 RR 下 MVCC 实现差异
+
+# 第 31 天：线上故障汇总 + 全套 MySQL 面试真题复盘
+
+整理高频线上问题：
+
+- 死锁排查
+
+- 大量锁等待
+
+- 主从延迟突增
+
+- 数据库 CPU 飙升
+
+- IO 打满
+
+- 分页深度慢查询
+
+  
+
+  配套大厂面试题 + 标准答案
+
 # 第四阶段：实战项目 + 面试查漏补缺（15 天，学完直接落地工作）
 
 ## 模块 1：小型业务数据库项目（10 天，分 3 套场景）
