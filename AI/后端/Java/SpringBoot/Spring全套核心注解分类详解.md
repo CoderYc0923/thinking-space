@@ -381,9 +381,58 @@
    - 自动扫描指定包下带 @Component/@Service/@Controller 的类，注册为 Bean
    - 启动类默认扫描当前包及所有子包
 
-3. @EnableAutoConfiguration
+3. **@EnableAutoConfiguration**
 
    - 开启 SpringBoot 自动装配，根据项目引入的依赖自动创建对应的 Bean（如 Mybatis、Tomcat、Redis）
+
+   - 读取 jar 包中的配置清单，批量导入第三方的配置类，借助条件注解按需创建第三方组件的 Bean，弥补 @ComponentScan 只能扫描本地项目包的短板。
+
+   - ```java
+     // 拓展：关闭某个自动配置
+     @SpringBootApplication(exclude = RedisAutoConfiguration.class)
+     // 直接排除指定自动配置类，该配置类里面所有@Bean都不再生效。
+     ```
+
+   - ```java
+     // 底层简单执行流程
+     1. @EnableAutoConfiguration里面有@Import(AutoConfigurationImportSelector.class);
+     2. AutoConfigurationImportSelector会去读取资源文件：
+         META‑INF/spring/org.springframework.boot.autoconfigure.imports（SpringBoot2.7 + 新版本）
+         老版本是：META‑INF/spring.factories
+     3. 文件里面写好了一大堆第三方自动配置类全限定类名，例如：WebMvcAutoConfiguration、RedisAutoConfiguration等。
+     4. Spring 把这些配置类全部导入进来；这些配置类都是@Configuration类，内部有大量@Bean方法
+     5. 解析这些配置类，执行里面的@Bean，把 RedisTemplate、DispatcherServlet 等对象创建出来，加入 IOC 容器
+     ```
+
+   - **关键：条件注解（@ConditionalOnXXX）**
+
+     - 全部自动配置类上都打了条件注解，例如：@ConditionalOnClass`、`@ConditionalOnMissingBean
+
+     - 逻辑：虽然一次性导入一大批配置类，**但不是全部都会生效**。Spring 会做判断：
+
+       - 类路径有没有对应 jar
+
+       - 容器里面是否已经存在该 Bean；
+
+       - 只有条件满足，这个`@Configuration`才真正生效，内部`@Bean`才会执行创建对象
+
+       - ```java
+         @Configuration
+         @ConditionalOnClass(RedisTemplate.class) // 类路径存在RedisTemplate才生效
+         public class RedisAutoConfiguration {
+             @Bean
+             @ConditionalOnMissingBean // 用户自己没有创建RedisTemplate Bean，我才创建
+             public RedisTemplate<?,?> redisTemplate(){
+                 // ...
+             }
+         }
+         
+         // 没有引入 redis 依赖：RedisTemplate类不存在，整个配置类直接失效，不会生成 Bean
+         // 引入 redis 依赖：条件满足；如果你自己写了@Bean RedisTemplate，@ConditionalOnMissingBean就不会再创建，优先使用你自定义的 Bean。
+         // 这就是 SpringBoot “约定大于配置” 的核心：给你一套默认 Bean；你需要改，就自己覆盖。
+         ```
+
+       - 
 
 4. @EnableWebMvc
 
