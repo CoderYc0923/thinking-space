@@ -1,0 +1,7 @@
+- 一般SQL分页用LIMIT offset,size进行。MySQL会先取出offset + size行，然后丢掉前面的offset行，所以offset越大越慢；
+- 同时排序ORDER BY非主键还要回表，offset极大的时候，优化器可能会选择全表扫描。
+- 采用子查询先取id再回表只能减轻「丢弃前 offset 行时」的整行拷贝/回表成本，跳过 offset 本身的代价还在，不能根治
+- 优化方案的话：
+  - 若是全量同步，用WHERE id > last_id ORDER BY id LIMIT n 游标分批
+  - 若是展示端用户列表，可以限制最大页或改成上下页（瀑布流）用游标，性能才稳定
+  - 小数据量就正常page/size就行。

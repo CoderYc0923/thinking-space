@@ -1,0 +1,2356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InnoDB 从文件到行 · 完整存储链路图</title>
+<style>
+  :root {
+    --bg: #eef2f6;
+    --text: #1e2a3a;
+    --muted: #6b7c8f;
+    --ibd: #2c3e50;
+    --ibd-bg: #f0f3f6;
+    --seg: #2980b9;
+    --seg-bg: #eaf4fb;
+    --ext: #e67e22;
+    --ext-bg: #fef6ee;
+    --page: #1abc9c;
+    --page-bg: #e8faf5;
+    --row: #8e44ad;
+    --row-bg: #f5eef8;
+    --leaf: #27ae60;
+    --leaf-bg: #e9f7ef;
+    --overflow: #c0392b;
+    --overflow-bg: #fdedec;
+    --undo: #5d6d7e;
+    --undo-bg: #eef1f4;
+    --border: #d0dae6;
+    --shadow: 0 4px 20px rgba(30,42,58,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    color: var(--text);
+    padding: 36px 16px 48px;
+    line-height: 1.55;
+  }
+
+  .container {
+    max-width: 1140px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 26px;
+    margin-bottom: 6px;
+    color: #15202b;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13.5px;
+    margin-bottom: 10px;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+  }
+
+  .legend i {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+
+  .nest {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 18px;
+    border: 2px solid var(--ibd);
+  }
+
+  .nest-label {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .nest-label .tag {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+
+  .nest-label .hint {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .nest-label .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 12px;
+  }
+
+  .box-ibd {
+    border: 2px dashed #95a5a6;
+    border-radius: 12px;
+    background: var(--ibd-bg);
+    padding: 14px;
+  }
+
+  .segments-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .segments-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .box-seg {
+    border: 2px solid var(--seg);
+    border-radius: 10px;
+    background: var(--seg-bg);
+    padding: 12px;
+    min-width: 0;
+  }
+
+  .box-seg > .nest-label .tag { color: var(--seg); font-size: 13px; }
+  .box-seg > .nest-label .badge { background: #d4eaf8; color: var(--seg); }
+
+  .box-seg.overflow-seg {
+    border-color: var(--overflow);
+    background: var(--overflow-bg);
+  }
+
+  .box-seg.overflow-seg > .nest-label .tag { color: var(--overflow); }
+  .box-seg.overflow-seg > .nest-label .badge { background: #f5c6c0; color: var(--overflow); }
+
+  .box-seg.rollback {
+    border-color: var(--undo);
+    border-style: dashed;
+    background: var(--undo-bg);
+  }
+
+  .box-seg.rollback > .nest-label .tag { color: var(--undo); }
+  .box-seg.rollback > .nest-label .badge { background: #d5dbe3; color: var(--undo); }
+
+  .box-ext {
+    border: 2px solid var(--ext);
+    border-radius: 8px;
+    background: var(--ext-bg);
+    padding: 10px;
+  }
+
+  .box-ext > .nest-label .tag { color: var(--ext); font-size: 12.5px; }
+  .box-ext > .nest-label .badge { background: #fde6c8; color: var(--ext); }
+
+  .pages-row {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+  }
+
+  .page-mini {
+    flex: 0 0 auto;
+    width: 42px;
+    border: 1.5px solid #7f8c8d;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    letter-spacing: 0.05em;
+  }
+
+  .page-focus { flex: 1; min-width: 0; }
+
+  .box-page {
+    border: 2px solid var(--page);
+    border-radius: 8px;
+    background: var(--page-bg);
+    padding: 8px;
+  }
+
+  .box-page > .nest-label { margin-bottom: 8px; }
+  .box-page > .nest-label .tag { color: #0e8c72; font-size: 12.5px; }
+  .box-page > .nest-label .badge { background: #c8f0e4; color: #0e8c72; }
+
+  .page-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .pp {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #fff;
+    padding: 5px 8px;
+    font-size: 11px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pp .n { font-weight: 700; color: var(--text); }
+  .pp .s { color: var(--muted); font-size: 10.5px; white-space: nowrap; }
+  .pp .d { color: var(--muted); font-size: 10.5px; }
+
+  .pp.user {
+    background: var(--row-bg);
+    border: 2px solid var(--row);
+    padding: 8px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pp.user .user-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .pp.user .user-head .n { color: var(--row); font-size: 12px; }
+
+  .row-bytes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .rb {
+    border-radius: 4px;
+    padding: 5px 7px;
+    font-size: 10.5px;
+    line-height: 1.35;
+    border: 1px solid transparent;
+  }
+
+  .rb.extra {
+    background: #fff7e8;
+    border-color: #f0d5a0;
+    color: #8a5a10;
+  }
+
+  .rb.real {
+    background: #eaf8ef;
+    border-color: #a8d9b8;
+    color: #1e6b3a;
+  }
+
+  .rb.overflow {
+    background: #fdecea;
+    border-color: #e8a9a3;
+    color: #922b21;
+  }
+
+  .rb.undo-ptr {
+    background: #eef1f4;
+    border-color: #b0b8c0;
+    color: #3d4a57;
+  }
+
+  .rb strong { display: block; font-size: 11px; color: inherit; }
+
+  .link-note {
+    margin-top: 6px;
+    font-size: 10.5px;
+    color: #7a5c00;
+    background: #fff8e1;
+    border: 1px solid #f0d9a0;
+    border-radius: 4px;
+    padding: 5px 8px;
+  }
+
+  .ptr-note {
+    margin-top: 6px;
+    font-size: 10.5px;
+    border-radius: 4px;
+    padding: 5px 8px;
+    border: 1px solid;
+  }
+
+  .ptr-note.to-overflow {
+    color: #922b21;
+    background: #fdedec;
+    border-color: #e8a9a3;
+  }
+
+  .ptr-note.to-undo {
+    color: #3d4a57;
+    background: #eef1f4;
+    border-color: #b0b8c0;
+  }
+
+  .special-page {
+    border: 2px dashed;
+    border-radius: 8px;
+    background: #fff;
+    padding: 10px;
+  }
+
+  .special-page.overflow-page {
+    border-color: var(--overflow);
+  }
+
+  .special-page.undo-page {
+    border-color: var(--undo);
+  }
+
+  .special-page h4 {
+    font-size: 12.5px;
+    margin-bottom: 8px;
+  }
+
+  .special-page.overflow-page h4 { color: var(--overflow); }
+  .special-page.undo-page h4 { color: var(--undo); }
+
+  .special-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sp {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 11px;
+    background: #fafbfc;
+  }
+
+  .sp strong { display: block; margin-bottom: 2px; }
+  .sp span { color: var(--muted); font-size: 10.5px; }
+
+  .compare-mini {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .compare-mini .cm {
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    background: #fff;
+  }
+
+  .compare-mini .cm strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11.5px;
+  }
+
+  .compare-mini .cm.compact { border-color: #f0d5a0; background: #fffaf0; }
+  .compare-mini .cm.dynamic { border-color: #e8a9a3; background: #fff5f4; }
+
+  .master {
+    display: grid;
+    grid-template-columns: 1.55fr 0.9fr;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .side-card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 16px;
+    border: 1px solid var(--border);
+  }
+
+  .side-card h3 {
+    font-size: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .side-card h3 .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #efe6f5;
+    color: var(--row);
+  }
+
+  .btree {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .bt-level {
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    background: #fafbfc;
+  }
+
+  .bt-level.idx {
+    border-color: #a8cce8;
+    background: #f3f9fd;
+  }
+
+  .bt-level.leaf-lv {
+    border-color: #a8d9b8;
+    background: #f3faf6;
+  }
+
+  .bt-level-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+    font-size: 11.5px;
+  }
+
+  .bt-level-head .lv {
+    font-weight: 800;
+    color: var(--seg);
+  }
+
+  .bt-level.leaf-lv .bt-level-head .lv { color: var(--leaf); }
+
+  .bt-level-head .seg-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #d4eaf8;
+    color: var(--seg);
+  }
+
+  .bt-level.leaf-lv .bt-level-head .seg-tag {
+    background: #c8ebd6;
+    color: var(--leaf);
+  }
+
+  .bt-node {
+    border: 2px solid var(--seg);
+    background: #eaf4fb;
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 11.5px;
+    text-align: center;
+  }
+
+  .bt-node.leaf {
+    border-color: var(--leaf);
+    background: var(--leaf-bg);
+  }
+
+  .bt-node .keys {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  .bt-node .key {
+    background: #fff;
+    border: 1px solid #b8d4f0;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 10px;
+    color: var(--seg);
+    font-weight: 700;
+  }
+
+  .bt-node.leaf .key {
+    border-color: #a8d9b8;
+    color: var(--leaf);
+  }
+
+  .bt-node .meta {
+    color: var(--muted);
+    font-size: 10.5px;
+    margin-top: 3px;
+  }
+
+  .bt-arrow {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11.5px;
+    padding: 6px 0;
+    line-height: 1.4;
+  }
+
+  .bt-arrow strong { color: var(--text); }
+
+  .bt-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    justify-content: center;
+    align-items: stretch;
+  }
+
+  .bt-row .bt-node {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .bt-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+    flex: 0 0 auto;
+    padding: 0 2px;
+  }
+
+  .bt-note {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--muted);
+    background: #fff8e1;
+    border: 1px solid #f0d9a0;
+    border-radius: 6px;
+    padding: 7px 9px;
+    line-height: 1.5;
+  }
+
+  /* 全宽 B+ 树层级总览 */
+  .btree-banner {
+    margin-top: 16px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 18px;
+    border: 2px solid #9b59b6;
+  }
+
+  .btree-banner h2 {
+    font-size: 15px;
+    margin-bottom: 6px;
+    color: #6c3483;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btree-banner h2 .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 10px;
+    background: #f5eef8;
+    color: #6c3483;
+  }
+
+  .btree-banner .intro {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .btree-full {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: center;
+  }
+
+  .btree-full .tier {
+    width: 100%;
+    max-width: 920px;
+  }
+
+  .btree-full .tier-bar {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .btree-full .tier-label {
+    flex: 0 0 118px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    font-size: 11.5px;
+    font-weight: 800;
+    padding: 8px 10px;
+    border-radius: 8px;
+    text-align: center;
+    line-height: 1.35;
+  }
+
+  .btree-full .tier-label.idx {
+    background: #eaf4fb;
+    color: var(--seg);
+    border: 1.5px solid #a8cce8;
+  }
+
+  .btree-full .tier-label.leaf {
+    background: #e9f7ef;
+    color: var(--leaf);
+    border: 1.5px solid #a8d9b8;
+  }
+
+  .btree-full .tier-label small {
+    font-weight: 600;
+    font-size: 10.5px;
+    opacity: 0.85;
+  }
+
+  .btree-full .tier-pages {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .btree-full .pg {
+    flex: 1;
+    border: 2px solid var(--seg);
+    background: #eaf4fb;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 11.5px;
+    text-align: center;
+    min-width: 0;
+  }
+
+  .btree-full .pg.leaf {
+    border-color: var(--leaf);
+    background: var(--leaf-bg);
+  }
+
+  .btree-full .pg .title { font-weight: 800; }
+  .btree-full .pg .sub { color: var(--muted); font-size: 10.5px; margin-top: 2px; }
+  .btree-full .pg .slots {
+    display: flex;
+    justify-content: center;
+    gap: 3px;
+    flex-wrap: wrap;
+    margin-top: 5px;
+  }
+  .btree-full .pg .slot {
+    background: #fff;
+    border: 1px solid #b8d4f0;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--seg);
+  }
+  .btree-full .pg.leaf .slot {
+    border-color: #a8d9b8;
+    color: var(--leaf);
+  }
+
+  .btree-full .hlink {
+    flex: 0 0 auto;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .btree-full .vlink {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 8px 0 8px 128px;
+    line-height: 1.4;
+  }
+
+  .btree-full .vlink strong { color: var(--text); }
+
+  .btree-full .aside-not {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .btree-full .aside-not .an {
+    border: 1.5px dashed;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .btree-full .aside-not .an.ov {
+    border-color: var(--overflow);
+    background: var(--overflow-bg);
+    color: #922b21;
+  }
+
+  .btree-full .aside-not .an.un {
+    border-color: var(--undo);
+    background: var(--undo-bg);
+    color: #3d4a57;
+  }
+
+  .btree-full .aside-not .an strong {
+    display: block;
+    margin-bottom: 3px;
+  }
+
+  /* 上下层怎么来的 */
+  .level-origin {
+    margin-top: 16px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 18px;
+    border: 2px solid var(--seg);
+  }
+
+  .level-origin h2 {
+    font-size: 15px;
+    margin-bottom: 6px;
+    color: var(--seg);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .level-origin h2 .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 10px;
+    background: #d4eaf8;
+    color: var(--seg);
+  }
+
+  .level-origin .intro {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .level-origin .intro strong { color: var(--text); }
+
+  .lo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .lo-card {
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: #fafbfc;
+  }
+
+  .lo-card h3 {
+    font-size: 13px;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .lo-card.vert { border-color: #a8cce8; background: #f3f9fd; }
+  .lo-card.horiz { border-color: #a8d9b8; background: #f3faf6; }
+  .lo-card.vert h3 { color: var(--seg); }
+  .lo-card.horiz h3 { color: var(--leaf); }
+
+  .lo-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .lo-table th,
+  .lo-table td {
+    border: 1px solid var(--border);
+    padding: 7px 9px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .lo-table th {
+    background: #eaf4fb;
+    font-weight: 700;
+  }
+
+  .lo-table td { background: #fff; }
+
+  /* 从 0 开始的树高演进流程图 */
+  .evolve {
+    margin-top: 4px;
+  }
+
+  .evolve > h3 {
+    font-size: 13px;
+    margin: 4px 0 10px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .evolve > h3 .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 10px;
+    background: #d4eaf8;
+    color: var(--seg);
+  }
+
+  .evolve-flow {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .ev-stage {
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .ev-stage .ev-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    background: #f0f4f8;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+  }
+
+  .ev-stage .ev-head .phase {
+    font-weight: 800;
+    color: #fff;
+    background: var(--seg);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11.5px;
+  }
+
+  .ev-stage.h1 .ev-head .phase { background: #16a085; }
+  .ev-stage.h2 .ev-head .phase { background: var(--seg); }
+  .ev-stage.h3 .ev-head .phase { background: #8e44ad; }
+  .ev-stage.h0 .ev-head .phase { background: #7f8c9b; }
+
+  .ev-stage .ev-head .height {
+    font-weight: 800;
+    color: var(--ext);
+    background: var(--ext-bg);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11.5px;
+  }
+
+  .ev-stage .ev-head .title {
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .ev-stage .ev-head .why {
+    color: var(--muted);
+    font-size: 11.5px;
+    margin-left: auto;
+  }
+
+  .ev-body {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 12px;
+    padding: 12px;
+    align-items: center;
+  }
+
+  .ev-diagram {
+    font-family: "Cascadia Code", "Consolas", "Microsoft YaHei", monospace;
+    font-size: 11.5px;
+    line-height: 1.45;
+    background: #f7f9fb;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #2c3e50;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .ev-diagram .c-root { color: var(--seg); font-weight: 700; }
+  .ev-diagram .c-leaf { color: var(--leaf); font-weight: 700; }
+  .ev-diagram .c-mid { color: #8e44ad; font-weight: 700; }
+  .ev-diagram .c-dim { color: #95a5a6; }
+
+  .ev-note {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+
+  .ev-note ul {
+    margin: 6px 0 0 16px;
+    color: var(--muted);
+    font-size: 11.5px;
+  }
+
+  .ev-note li { margin: 3px 0; }
+  .ev-note strong { color: var(--text); }
+
+  .ev-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0;
+    gap: 2px;
+  }
+
+  .ev-arrow .line {
+    width: 2px;
+    height: 14px;
+    background: var(--seg);
+  }
+
+  .ev-arrow .label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--seg);
+    border-radius: 14px;
+    padding: 3px 12px;
+    text-align: center;
+    max-width: 520px;
+    line-height: 1.35;
+  }
+
+  .ev-arrow .line.down {
+    height: 14px;
+  }
+
+  .ev-timeline {
+    margin-top: 14px;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .ev-timeline th,
+  .ev-timeline td {
+    border: 1px solid var(--border);
+    padding: 7px 9px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .ev-timeline th {
+    background: #eaf4fb;
+    font-weight: 700;
+  }
+
+  .ev-timeline td { background: #fff; }
+  .ev-timeline .h { font-weight: 800; color: var(--ext); white-space: nowrap; }
+
+  .lo-tip {
+    margin-top: 12px;
+    font-size: 12.5px;
+    background: #fff8e1;
+    border: 1px solid #f0d9a0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #7a5c00;
+    line-height: 1.6;
+  }
+
+  .lo-tip strong { color: var(--text); }
+
+  /* InnoDB 真实页分裂规则 */
+  .split-rules {
+    margin-top: 16px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 16px 18px;
+    border: 2px solid #16a085;
+  }
+
+  .split-rules h2 {
+    font-size: 15px;
+    margin-bottom: 4px;
+    color: #0e6655;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .split-rules h2 .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 10px;
+    background: #d5f5e3;
+    color: #0e6655;
+  }
+
+  .split-rules .intro {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .split-pipe {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+
+  .split-pipe .sp {
+    background: #e8f8f5;
+    border: 1px solid #a3e4d7;
+    border-radius: 8px;
+    padding: 7px 10px;
+    line-height: 1.4;
+  }
+
+  .split-pipe .sp strong { display: block; color: #0e6655; font-size: 11.5px; }
+
+  .split-pipe .arr {
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .split-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .split-table th,
+  .split-table td {
+    border: 1px solid var(--border);
+    padding: 7px 9px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .split-table th {
+    background: #e8f8f5;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .split-table td { background: #fff; }
+  .split-table .ok { color: #0e6655; font-weight: 700; }
+  .split-table .bad { color: #c0392b; font-weight: 700; }
+
+  .split-mini {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .split-mini .sm {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 11.5px;
+    background: #fafbfc;
+    line-height: 1.45;
+  }
+
+  .split-mini .sm strong {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 12px;
+  }
+
+  .split-one {
+    font-size: 12.5px;
+    background: #e8f8f5;
+    border: 1px solid #a3e4d7;
+    border-radius: 8px;
+    padding: 9px 12px;
+    line-height: 1.55;
+    color: #0e6655;
+  }
+
+  .split-one strong { color: var(--text); }
+
+  /* 树高与数据量估算 */
+  .cap-box {
+    margin-top: 16px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 16px 18px;
+    border: 2px solid #2980b9;
+  }
+
+  .cap-box h2 {
+    font-size: 15px;
+    margin-bottom: 4px;
+    color: var(--seg);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .cap-box h2 .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 10px;
+    background: #d4eaf8;
+    color: var(--seg);
+  }
+
+  .cap-box .intro {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .cap-vars {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .cap-vars .cv {
+    border: 1px solid #a8cce8;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #f3f9fd;
+    font-size: 11.5px;
+    line-height: 1.4;
+  }
+
+  .cap-vars .cv strong {
+    display: block;
+    color: var(--seg);
+    font-size: 13px;
+    margin-bottom: 2px;
+  }
+
+  .cap-formula {
+    font-family: "Cascadia Code", "Consolas", "Microsoft YaHei", monospace;
+    font-size: 12.5px;
+    background: #f3f9fd;
+    border: 1px solid #a8cce8;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    line-height: 1.7;
+    color: #1e2a3a;
+  }
+
+  .cap-formula .hl { color: var(--seg); font-weight: 700; }
+
+  .cap-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .cap-table th,
+  .cap-table td {
+    border: 1px solid var(--border);
+    padding: 7px 9px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .cap-table th { background: #eaf4fb; font-weight: 700; }
+  .cap-table td { background: #fff; }
+  .cap-table .num { font-weight: 700; color: var(--ext); white-space: nowrap; }
+
+  .cap-ex {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .cap-ex .ce {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 11.5px;
+    background: #fafbfc;
+    line-height: 1.45;
+  }
+
+  .cap-ex .ce strong { display: block; margin-bottom: 3px; font-size: 12px; color: var(--seg); }
+
+  .cap-note {
+    font-size: 12px;
+    background: #fff8e1;
+    border: 1px solid #f0d9a0;
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: #7a5c00;
+    line-height: 1.55;
+  }
+
+  .cap-note strong { color: var(--text); }
+
+  .map-list {
+    list-style: none;
+    font-size: 12.5px;
+  }
+
+  .map-list li {
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--border);
+    display: flex;
+    gap: 8px;
+  }
+
+  .map-list li:last-child { border-bottom: none; }
+  .map-list .k { font-weight: 700; color: var(--seg); white-space: nowrap; }
+  .map-list .v { color: var(--muted); }
+
+  .query-path {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .q-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12.5px;
+    background: #f7f9fb;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .q-num {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #c0392b;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .flow-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 16px;
+  }
+
+  .flow-card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 16px;
+    border-left: 5px solid;
+  }
+
+  .flow-card.overflow { border-left-color: var(--overflow); }
+  .flow-card.undo { border-left-color: var(--undo); }
+
+  .flow-card h3 {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  .flow-card.overflow h3 { color: var(--overflow); }
+  .flow-card.undo h3 { color: var(--undo); }
+
+  .flow-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .flow-step {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 12.5px;
+    background: #fafbfc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .flow-step .dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 5px;
+  }
+
+  .flow-card.overflow .dot { background: var(--overflow); }
+  .flow-card.undo .dot { background: var(--undo); }
+
+  .bridge {
+    margin: 18px 0 8px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  .bridge strong { color: var(--text); }
+
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 12.5px;
+  }
+
+  .compare-table th {
+    background: #f0f3f6;
+    padding: 9px 10px;
+    text-align: left;
+    border: 1px solid var(--border);
+  }
+
+  .compare-table td {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .compare-table tr:nth-child(even) td { background: #fafbfc; }
+
+  .bottom-card {
+    margin-top: 18px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+  }
+
+  .bottom-card h3 {
+    font-size: 14px;
+    margin-bottom: 6px;
+    color: #5d6d7e;
+  }
+
+  .summary {
+    margin-top: 18px;
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: #fff;
+    border-radius: 14px;
+    padding: 18px 22px;
+    font-size: 13.5px;
+    line-height: 1.85;
+  }
+
+  .summary strong { color: #f1c40f; }
+
+  .foot {
+    text-align: center;
+    margin-top: 22px;
+    color: #a0aab4;
+    font-size: 12px;
+  }
+
+  @media (max-width: 900px) {
+    .master,
+    .segments-top,
+    .segments-bottom,
+    .flow-grid,
+    .compare-mini,
+    .btree-full .aside-not,
+    .lo-grid { grid-template-columns: 1fr; }
+    .ev-body { grid-template-columns: 1fr; }
+    .split-mini { grid-template-columns: 1fr; }
+    .cap-vars { grid-template-columns: 1fr 1fr; }
+    .cap-ex { grid-template-columns: 1fr; }
+    .ev-stage .ev-head .why { margin-left: 0; width: 100%; }
+    .pages-row { flex-wrap: wrap; }
+    .page-mini { writing-mode: horizontal-tb; width: auto; padding: 4px 8px; }
+    .btree-full .tier-bar { flex-direction: column; }
+    .btree-full .tier-label { flex: none; width: 100%; }
+    .btree-full .vlink { padding-left: 0; }
+    .btree-full .tier-pages { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>InnoDB 从文件到行 · 完整存储链路</h1>
+  <p class="subtitle">表空间 ⊃ 段 ⊃ 区 ⊃ 页 ⊃ 行；B+ 树 = 数据页按「根 → 非叶 → 叶」组织；溢出页 / undo 页不在树上</p>
+
+  <div class="legend">
+    <span><i style="background:#2c3e50"></i>表空间 .ibd</span>
+    <span><i style="background:#2980b9"></i>段 Segment</span>
+    <span><i style="background:#e67e22"></i>区 Extent</span>
+    <span><i style="background:#1abc9c"></i>数据页</span>
+    <span><i style="background:#c0392b"></i>溢出页</span>
+    <span><i style="background:#5d6d7e"></i>undo 页</span>
+    <span><i style="background:#27ae60"></i>B+ 树叶子</span>
+  </div>
+
+  <div class="master">
+    <div class="nest">
+      <div class="nest-label">
+        <span class="tag">① 表空间 · 表名.ibd</span>
+        <span class="badge" style="background:#dfe6ee;color:#2c3e50;">宏观容器</span>
+        <span class="hint">数据页 / 溢出页 / undo 页 都是「页」，只是职责不同</span>
+      </div>
+
+      <div class="box-ibd">
+        <div class="segments-top">
+          <!-- 索引段 -->
+          <div class="box-seg">
+            <div class="nest-label">
+              <span class="tag">②a 索引段</span>
+              <span class="badge">非叶子区集合</span>
+            </div>
+            <div class="box-ext">
+              <div class="nest-label">
+                <span class="tag">③ 区 = 1MB</span>
+                <span class="badge">连续 64 页</span>
+              </div>
+              <div class="pages-row">
+                <div class="page-mini">页…</div>
+                <div class="page-focus">
+                  <div class="box-page">
+                    <div class="nest-label">
+                      <span class="tag">④ 非叶子数据页</span>
+                      <span class="badge">目录项</span>
+                    </div>
+                    <div class="page-stack">
+                      <div class="pp"><span class="n">File Header</span><span class="d">页间双向链表</span><span class="s">38B</span></div>
+                      <div class="pp"><span class="n">Page Header / Inf·Sup</span><span class="d">外壳</span><span class="s">…</span></div>
+                      <div class="pp user">
+                        <div class="user-head">
+                          <span class="n">⭐ User Records</span>
+                          <span class="s">record_type=1</span>
+                        </div>
+                        <div class="row-bytes">
+                          <div class="rb extra"><strong>额外信息</strong>记录头等</div>
+                          <div class="rb real"><strong>真实数据</strong>索引键 + 子页指针</div>
+                        </div>
+                      </div>
+                      <div class="pp"><span class="n">Page Directory</span><span class="d">槽二分</span><span class="s">变长</span></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="page-mini">页…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 数据段 -->
+          <div class="box-seg">
+            <div class="nest-label">
+              <span class="tag">②b 数据段</span>
+              <span class="badge">叶子区集合</span>
+            </div>
+            <div class="box-ext">
+              <div class="nest-label">
+                <span class="tag">③ 区 = 1MB</span>
+                <span class="badge">连续 64 页</span>
+              </div>
+              <div class="pages-row">
+                <div class="page-mini">页…</div>
+                <div class="page-focus">
+                  <div class="box-page" style="border-color:var(--leaf);background:var(--leaf-bg);">
+                    <div class="nest-label">
+                      <span class="tag" style="color:var(--leaf);">④ 叶子数据页 16KB</span>
+                      <span class="badge" style="background:#c8ebd6;color:var(--leaf);">业务行</span>
+                    </div>
+                    <div class="page-stack">
+                      <div class="pp"><span class="n">File Header</span><span class="d">同层页双向链表</span><span class="s">38B</span></div>
+                      <div class="pp"><span class="n">Page Header / Inf·Sup</span><span class="d">外壳</span><span class="s">…</span></div>
+                      <div class="pp user">
+                        <div class="user-head">
+                          <span class="n">⭐ User Records（一行）</span>
+                          <span class="s">⑤ Compact / Dynamic</span>
+                        </div>
+                        <div class="row-bytes">
+                          <div class="rb extra"><strong>变长长度列表</strong>逆序</div>
+                          <div class="rb extra"><strong>NULL 值列表</strong>bit</div>
+                          <div class="rb extra"><strong>记录头 5B</strong>next_record</div>
+                          <div class="rb real"><strong>row_id?</strong>无主键才有</div>
+                          <div class="rb undo-ptr"><strong>trx_id / roll_ptr</strong>→ undo 页</div>
+                          <div class="rb real"><strong>普通列数据</strong>页内直接存</div>
+                          <div class="rb overflow"><strong>大字段</strong>页内留指针(20B) → 溢出页</div>
+                        </div>
+                        <div class="ptr-note to-overflow">大列塞不下当前页 → 溢出到「溢出页」（见下方 ②d）</div>
+                        <div class="ptr-note to-undo">roll_pointer(7B) → 回滚段里的 undo 记录（见下方 ②c）</div>
+                      </div>
+                      <div class="pp"><span class="n">Page Directory</span><span class="d">先二分槽 → 再链表</span><span class="s">变长</span></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="page-mini">页…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 溢出页 + undo 页 -->
+        <div class="segments-bottom">
+          <div class="box-seg overflow-seg">
+            <div class="nest-label">
+              <span class="tag">②d 溢出页（BLOB 页）</span>
+              <span class="badge">行溢出专用</span>
+              <span class="hint">也是 16KB 页，但不挂在 B+ 树节点上</span>
+            </div>
+            <div class="special-page overflow-page">
+              <h4>一页存不下一条大列时</h4>
+              <div class="special-stack">
+                <div class="sp">
+                  <strong>触发条件</strong>
+                  <span>varchar / TEXT / BLOB 太大，当前数据页放不下整行（或策略要求外置）</span>
+                </div>
+                <div class="sp">
+                  <strong>页内真实数据区怎么留</strong>
+                  <span>留下 20 字节「溢出页地址」；真正大段字节放到溢出页链表里</span>
+                </div>
+                <div class="sp">
+                  <strong>溢出页本身</strong>
+                  <span>存剩余列数据；一页不够就再链下一张溢出页</span>
+                </div>
+              </div>
+              <div class="compare-mini">
+                <div class="cm compact">
+                  <strong>Compact</strong>
+                  页内：留<strong>部分列前缀</strong> + <strong>20B 溢出页地址</strong>；剩余进溢出页
+                </div>
+                <div class="cm dynamic">
+                  <strong>Dynamic / Compressed</strong>
+                  页内：通常<strong>只留 20B 地址</strong>；整列数据都在溢出页（5.7+ 默认 Dynamic）
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="box-seg rollback">
+            <div class="nest-label">
+              <span class="tag">②c 回滚段</span>
+              <span class="badge">undo 页集合</span>
+              <span class="hint">支撑回滚 + MVCC 读历史版本</span>
+            </div>
+            <div class="special-page undo-page">
+              <h4>undo 日志页（不是业务行页）</h4>
+              <div class="special-stack">
+                <div class="sp">
+                  <strong>谁指向它</strong>
+                  <span>叶子行里的 <b>roll_pointer</b>（7B）指向本条记录的上一个版本</span>
+                </div>
+                <div class="sp">
+                  <strong>undo 记录存什么</strong>
+                  <span>UPDATE：旧值足够回滚/构造旧版本；INSERT：回滚时删掉即可的信息；DELETE：标记相关版本链信息</span>
+                </div>
+                <div class="sp">
+                  <strong>版本链</strong>
+                  <span>当前行 → undo1 → undo2 → … 形成版本链；一致性读按 Read View 沿链找可见版本</span>
+                </div>
+                <div class="sp">
+                  <strong>和数据页的区别</strong>
+                  <span>undo 页不组成用户表 B+ 树；purge 后可回收。溢出页存「大字段当前值」，undo 页存「历史版本」</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="side-card">
+        <h3>⑥ B+ 树层级 <span class="badge">每个节点 = 一张数据页</span></h3>
+        <div class="btree">
+          <div class="bt-level idx">
+            <div class="bt-level-head">
+              <span class="lv">第 2 层 · 根</span>
+              <span class="seg-tag">②a 索引段</span>
+            </div>
+            <div class="bt-node">
+              <strong>根页（数据页）</strong>
+              <div class="keys">
+                <span class="key">≤30 →页A</span>
+                <span class="key">&gt;30 →页B</span>
+              </div>
+              <div class="meta">只存目录项：索引键 + 子页号</div>
+            </div>
+          </div>
+
+          <div class="bt-arrow">▼ 父页目录项二分 → 决定下一层去<strong>哪一张数据页</strong></div>
+
+          <div class="bt-level idx">
+            <div class="bt-level-head">
+              <span class="lv">第 1 层 · 非叶子</span>
+              <span class="seg-tag">②a 索引段</span>
+            </div>
+            <div class="bt-row">
+              <div class="bt-node">
+                <strong>页 A</strong>
+                <div class="keys">
+                  <span class="key">→叶1</span>
+                  <span class="key">→叶2</span>
+                </div>
+                <div class="meta">仍是目录项</div>
+              </div>
+              <span class="bt-link">↔</span>
+              <div class="bt-node">
+                <strong>页 B</strong>
+                <div class="keys">
+                  <span class="key">→叶3</span>
+                  <span class="key">→叶4</span>
+                </div>
+                <div class="meta">同层双向链表</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bt-arrow">▼ 落到叶子层（真正存要查的内容）</div>
+
+          <div class="bt-level leaf-lv">
+            <div class="bt-level-head">
+              <span class="lv">第 0 层 · 叶子</span>
+              <span class="seg-tag">②b 数据段</span>
+            </div>
+            <div class="bt-row">
+              <div class="bt-node leaf">
+                <strong>叶1</strong>
+                <div class="keys"><span class="key">行…</span></div>
+              </div>
+              <span class="bt-link">↔</span>
+              <div class="bt-node leaf">
+                <strong>叶2</strong>
+                <div class="keys"><span class="key">行…</span></div>
+              </div>
+              <span class="bt-link">↔</span>
+              <div class="bt-node leaf">
+                <strong>叶3</strong>
+                <div class="keys"><span class="key">行…</span></div>
+              </div>
+            </div>
+            <div class="meta" style="text-align:center;margin-top:6px;font-size:10.5px;color:var(--muted);">
+              聚簇叶子 = 完整行；二级叶子 = 索引列 + 主键 · 同层 ↔ 方便范围扫
+            </div>
+          </div>
+        </div>
+        <div class="bt-note">
+          <strong>两套指针别混：</strong>上下层靠「目录项里的子页号」；同层靠 File Header 双向链表。
+          溢出页 / undo 页<strong>不是</strong>树上的节点。
+        </div>
+        <ul class="map-list" style="margin-top:10px;">
+          <li><span class="k">索引段</span><span class="v">= 根 + 所有非叶子数据页</span></li>
+          <li><span class="k">数据段</span><span class="v">= 所有叶子数据页</span></li>
+          <li><span class="k">溢出 / undo</span><span class="v">旁路挂接，不参与树高</span></li>
+        </ul>
+      </div>
+
+      <div class="side-card">
+        <h3>⑦ 主键查询路径 <span class="badge" style="background:#fdedec;color:#c0392b;">顺着树高往下走</span></h3>
+        <div class="query-path">
+          <div class="q-step"><span class="q-num">1</span><span><strong>第 2 层根页</strong>：目录项二分 → 下一层页号</span></div>
+          <div class="q-step"><span class="q-num">2</span><span><strong>第 1 层非叶子</strong>：再二分 → 目标叶子页号</span></div>
+          <div class="q-step"><span class="q-num">3</span><span><strong>第 0 层叶子</strong>：页目录槽二分 → next_record 找行</span></div>
+          <div class="q-step"><span class="q-num">4</span><span>大字段外置 → 跟 20B 去<strong>溢出页</strong>（离开 B+ 树）</span></div>
+          <div class="q-step"><span class="q-num">5</span><span>要历史版本 → 跟 roll_ptr 去<strong>undo 页</strong>（离开 B+ 树）</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 全宽：B+ 树层级总览 -->
+  <div class="btree-banner">
+    <h2>B+ 树层级总览 <span class="badge">核心：树上每一层的每一个节点，都是一张 16KB 数据页</span></h2>
+    <p class="intro">
+      左边嵌套图画的是「页在文件里怎么切空间」；这里画的是「数据页怎么组成索引」。
+      层数少 → 磁盘 IO 少；同层有序 + 双向链表 → 范围查询友好。
+    </p>
+    <div class="btree-full">
+      <div class="tier">
+        <div class="tier-bar">
+          <div class="tier-label idx">第 2 层<br>根页<small>索引段</small></div>
+          <div class="tier-pages">
+            <div class="pg">
+              <div class="title">根 · 数据页</div>
+              <div class="sub">目录项 record_type=1</div>
+              <div class="slots">
+                <span class="slot">键≤30 → A</span>
+                <span class="slot">键&gt;30 → B</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="vlink">▼ 垂直：父 → 子（目录项里的<strong>子页指针</strong>）</div>
+
+      <div class="tier">
+        <div class="tier-bar">
+          <div class="tier-label idx">第 1 层<br>非叶子<small>索引段</small></div>
+          <div class="tier-pages">
+            <div class="pg">
+              <div class="title">页 A</div>
+              <div class="sub">仍只存目录项</div>
+              <div class="slots">
+                <span class="slot">→ 叶1</span>
+                <span class="slot">→ 叶2</span>
+              </div>
+            </div>
+            <span class="hlink">↔</span>
+            <div class="pg">
+              <div class="title">页 B</div>
+              <div class="sub">同层双向链表</div>
+              <div class="slots">
+                <span class="slot">→ 叶3</span>
+                <span class="slot">→ 叶4</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="vlink">▼ 落到叶子 · 水平：同层页 ↔（File Header 双向链表，方便范围扫）</div>
+
+      <div class="tier">
+        <div class="tier-bar">
+          <div class="tier-label leaf">第 0 层<br>叶子<small>数据段</small></div>
+          <div class="tier-pages">
+            <div class="pg leaf">
+              <div class="title">叶1</div>
+              <div class="sub">聚簇：完整行</div>
+              <div class="slots"><span class="slot">User Records</span></div>
+            </div>
+            <span class="hlink">↔</span>
+            <div class="pg leaf">
+              <div class="title">叶2</div>
+              <div class="sub">页内再找行</div>
+              <div class="slots"><span class="slot">槽二分+链表</span></div>
+            </div>
+            <span class="hlink">↔</span>
+            <div class="pg leaf">
+              <div class="title">叶3</div>
+              <div class="sub">二级：键+主键</div>
+              <div class="slots"><span class="slot">User Records</span></div>
+            </div>
+            <span class="hlink">↔</span>
+            <div class="pg leaf">
+              <div class="title">叶4</div>
+              <div class="sub">…</div>
+              <div class="slots"><span class="slot">行…</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="aside-not">
+        <div class="an ov">
+          <strong>❌ 溢出页不在树上</strong>
+          叶子行大字段用 20B 地址外挂；读完叶子后才去拼完整列，不增加树高。
+        </div>
+        <div class="an un">
+          <strong>❌ undo 页不在树上</strong>
+          roll_pointer 挂历史版本；回滚 / MVCC 沿版本链走，也不算 B+ 树的一层。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 上下层怎么来的 -->
+  <div class="level-origin">
+    <h2>上下层是怎么来的 <span class="badge">不是手工分配，是页分裂长出来的</span></h2>
+    <p class="intro">
+      B+ 树的层，不是建表时预先画好的。一开始往往<strong>根页就是叶子</strong>；
+      数据变多、页写满发生 <strong>page split</strong>，父页多目录项，必要时才<strong>多出一层</strong>。
+    </p>
+
+    <div class="lo-grid">
+      <div class="lo-card vert">
+        <h3>垂直 · 上下层怎么连</h3>
+        <table class="lo-table">
+          <tr>
+            <th>层</th>
+            <th>页里存什么</th>
+            <th>作用</th>
+          </tr>
+          <tr>
+            <td>非叶子（含根）</td>
+            <td><strong>目录项</strong>：索引键 + 子页页号</td>
+            <td>指路：下一层去哪一页</td>
+          </tr>
+          <tr>
+            <td>叶子</td>
+            <td>真正要查的内容<br>（聚簇=整行；二级=键+主键）</td>
+            <td>终点</td>
+          </tr>
+        </table>
+        <p style="margin-top:8px;font-size:12px;color:var(--muted);">
+          父 → 子：靠目录项里的<strong style="color:var(--text)">子页指针</strong>
+        </p>
+      </div>
+      <div class="lo-card horiz">
+        <h3>水平 · 同层怎么连</h3>
+        <table class="lo-table">
+          <tr>
+            <th>关系</th>
+            <th>靠什么</th>
+            <th>为了什么</th>
+          </tr>
+          <tr>
+            <td>同层页 ↔ 页</td>
+            <td>File Header <strong>双向链表</strong></td>
+            <td>范围扫描顺序走相邻页</td>
+          </tr>
+          <tr>
+            <td>页内行 → 行</td>
+            <td>记录头 <strong>next_record</strong> 单向链</td>
+            <td>页内插删方便，再配页目录二分</td>
+          </tr>
+        </table>
+        <p style="margin-top:8px;font-size:12px;color:var(--muted);">
+          和「段」对应：索引段养<strong style="color:var(--text)">根+非叶</strong>；数据段养<strong style="color:var(--text)">叶子</strong>
+        </p>
+      </div>
+    </div>
+
+    <div class="evolve">
+      <h3>从 0 开始：树高演进流程图 <span class="badge">先裂叶子 → 再撑根 → 根满才加层</span></h3>
+      <p style="font-size:12px;color:var(--muted);margin:-4px 0 12px;">
+        示意里「一页只画几条」是为了好看；真实 16KB 一页能塞很多行/目录项，但<strong style="color:var(--text)">分裂与长高的顺序一样</strong>。
+      </p>
+
+      <div class="evolve-flow">
+        <!-- 阶段 0 -->
+        <div class="ev-stage h0">
+          <div class="ev-head">
+            <span class="phase">阶段 0</span>
+            <span class="height">空表</span>
+            <span class="title">还没有用户记录</span>
+            <span class="why">树还谈不上「高」</span>
+          </div>
+          <div class="ev-body">
+            <div class="ev-diagram"><span class="c-dim">（尚无业务行可查）</span></div>
+            <div class="ev-note">
+              <strong>状态</strong>
+              <ul>
+                <li>表刚建好，索引结构已准备，但还没往叶子里堆业务行</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="ev-arrow">
+          <div class="line"></div>
+          <div class="label">▼ 开始 INSERT 主键 1, 2, 3…</div>
+          <div class="line down"></div>
+        </div>
+
+        <!-- 阶段 1 -->
+        <div class="ev-stage h1">
+          <div class="ev-head">
+            <span class="phase">阶段 1</span>
+            <span class="height">树高 = 1</span>
+            <span class="title">根页 = 叶子页</span>
+            <span class="why">所有行都在同一页</span>
+          </div>
+          <div class="ev-body">
+            <div class="ev-diagram">┌─────────────────┐
+│ <span class="c-root">根页</span> = <span class="c-leaf">叶子</span>      │
+│ 完整行：1, 2, 3…  │
+└─────────────────┘</div>
+            <div class="ev-note">
+              <strong>发生了什么</strong>
+              <ul>
+                <li>只有 <strong>1 页</strong>：既是根，也是叶子</li>
+                <li>主要落在<strong>数据段</strong>（叶子）</li>
+                <li>查一行：读这 1 页即可</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="ev-arrow">
+          <div class="line"></div>
+          <div class="label">▼ 叶子写满 → page split（先裂叶子，不是先加层）</div>
+          <div class="line down"></div>
+        </div>
+
+        <!-- 阶段 2 -->
+        <div class="ev-stage h2">
+          <div class="ev-head">
+            <span class="phase">阶段 2</span>
+            <span class="height">树高 = 2</span>
+            <span class="title">出现「只存目录项」的根</span>
+            <span class="why">叶子裂成 L1、L2；根指路</span>
+          </div>
+          <div class="ev-body">
+            <div class="ev-diagram">        ┌──────────────┐
+        │ <span class="c-root">根（非叶子）</span>   │  ≤5→L1 | &gt;5→L2
+        └──────┬───────┘
+     ┌─────────┴─────────┐
+     ▼                   ▼
+┌─────────┐         ┌─────────┐
+│ <span class="c-leaf">叶 L1</span>    │ ←───→ │ <span class="c-leaf">叶 L2</span>    │
+│ 行 1..5 │         │ 行 6..n │
+└─────────┘         └─────────┘</div>
+            <div class="ev-note">
+              <strong>发生了什么</strong>
+              <ul>
+                <li>原页拆成两张<strong>叶子</strong>，同层 <strong>↔ 双向链表</strong></li>
+                <li>上面用<strong>根</strong>存目录项：键 + 子页号</li>
+                <li><strong>索引段</strong>=根；<strong>数据段</strong>=L1、L2</li>
+                <li>用户行变多 → <strong>先撑叶子</strong>；根只是多记指针</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="ev-arrow">
+          <div class="line"></div>
+          <div class="label">▼ 继续插入：叶子继续裂，根里目录项越来越多（树高仍是 2）</div>
+          <div class="line down"></div>
+        </div>
+
+        <!-- 阶段 3 -->
+        <div class="ev-stage h2">
+          <div class="ev-head">
+            <span class="phase">阶段 3</span>
+            <span class="height">仍 = 2</span>
+            <span class="title">很多叶子，根快满了</span>
+            <span class="why">数据段变胖；还没加层</span>
+          </div>
+          <div class="ev-body">
+            <div class="ev-diagram">            ┌─────────根─────────┐
+            │ 很多目录项 →L1…→Ln │
+            └──────────┬─────────┘
+     ┌─────┬─────┬─────┴─────┬─────┐
+     ▼     ▼     ▼           ▼     ▼
+    L1 ↔  L2 ↔  L3 ↔  …  ↔ Ln   <span class="c-dim">（全是叶子）</span></div>
+            <div class="ev-note">
+              <strong>发生了什么</strong>
+              <ul>
+                <li>仍是：<strong>上面 1 个根 + 下面一堆叶子</strong></li>
+                <li>根 16KB，目录项很小，往往能挂约<strong>上千</strong>子页</li>
+                <li>所以很久都<strong>不必</strong>长到 3 层</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="ev-arrow">
+          <div class="line"></div>
+          <div class="label">▼ 根的目录项也满了 → 根分裂 + 诞生新根 → 树高 +1</div>
+          <div class="line down"></div>
+        </div>
+
+        <!-- 阶段 4 -->
+        <div class="ev-stage h3">
+          <div class="ev-head">
+            <span class="phase">阶段 4</span>
+            <span class="height">树高 = 3</span>
+            <span class="title">新根 + 中间非叶 + 叶子</span>
+            <span class="why">不是区凑满 64 页，是根装不下了</span>
+          </div>
+          <div class="ev-body">
+            <div class="ev-diagram">           ┌───────<span class="c-root">新根</span>───────┐
+           │ ≤k→I1 | &gt;k→I2     │
+           └─────────┬─────────┘
+        ┌────────────┴────────────┐
+        ▼                         ▼
+   ┌────────┐               ┌────────┐
+   │ <span class="c-mid">非叶 I1</span> │ ←─────────→ │ <span class="c-mid">非叶 I2</span> │
+   │ →L1…Lm │               │ →L…Ln  │
+   └───┬────┘               └───┬────┘
+       ▼                        ▼
+  L1 ↔ L2 ↔ … ↔ Lm ↔ … ↔ Ln   <span class="c-dim">叶子 / 数据段</span></div>
+            <div class="ev-note">
+              <strong>发生了什么</strong>
+              <ul>
+                <li>原根裂成中间层 <strong>I1、I2</strong>（仍在索引段）</li>
+                <li>上面新建<strong>新根</strong>，只指 I1 / I2</li>
+                <li>垂直：目录项子页指针；水平：同层双向链表</li>
+                <li>查一行 ≈ 新根 → 中间层 → 叶子（约 3 次 IO）</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="ev-arrow">
+          <div class="line"></div>
+          <div class="label">▼ 若中间层也全体撑满、一直冒到根再满 → 同理再造新根（树高 4，少见）</div>
+          <div class="line down"></div>
+        </div>
+
+        <div class="ev-stage h0">
+          <div class="ev-head">
+            <span class="phase">之后</span>
+            <span class="height">多数停在 2～3</span>
+            <span class="title">扇出大 → 树很矮</span>
+            <span class="why">面试常说：最好三层以内</span>
+          </div>
+          <div class="ev-body">
+            <div class="ev-diagram"><span class="c-dim">非叶子几乎只存「键 + 页号」→ 一层扇出约 10³
+→ 3 层往往就能撑住很大数据量</span></div>
+            <div class="ev-note">
+              <strong>记住顺序</strong>
+              <ul>
+                <li>用户行变多 → <strong>先裂叶子</strong></li>
+                <li>叶子变多 → 父页目录项变多</li>
+                <li>根也满 → <strong>才加层</strong></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <table class="ev-timeline">
+        <tr>
+          <th>阶段</th>
+          <th>发生了什么</th>
+          <th>树高</th>
+          <th>段上长什么</th>
+        </tr>
+        <tr>
+          <td>0</td>
+          <td>空表</td>
+          <td class="h">—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>行都在一页（根=叶）</td>
+          <td class="h">1</td>
+          <td>主要是叶子</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>叶子裂开，出现目录根</td>
+          <td class="h">2</td>
+          <td>索引段有根；数据段有多叶</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>叶子继续裂，根目录项变多</td>
+          <td class="h">仍 2</td>
+          <td>数据段变胖</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>根满 → 根裂 + 新根</td>
+          <td class="h">3</td>
+          <td>索引段多一层中间页</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="lo-tip">
+      <strong>一句话：</strong>
+      从 0 开始先只有「根兼叶子」→ 叶子满了裂叶子、上面用目录根指路（高=2）→
+      叶子越来越多把根目录撑满 → 根裂开并长出新根（高=3）。
+      用户记录推动的是<strong>叶子分裂</strong>；索引段是被「多出来的叶子页」逼着变胖、变高的。
+      和「最好三层以内」：扇出大、树矮 → 查一行 IO 少。
+    </div>
+  </div>
+
+  <!-- InnoDB 真实页分裂规则 -->
+  <div class="split-rules">
+    <h2>InnoDB 真实页分裂规则 <span class="badge">叶 / 非叶同一套；先重排再裂；切法看插入方向</span></h2>
+    <p class="intro">都不是「旧页原封不动 + 旁边挂空页」，而是把满页记录拆开；自增场景近似「左页留满、右开新页接着写」。</p>
+
+    <div class="split-pipe">
+      <div class="sp"><strong>① 空间不够</strong>本页塞不下新记录</div>
+      <span class="arr">→</span>
+      <div class="sp"><strong>② 先 reorganize</strong>整理碎片空闲；够了就不裂</div>
+      <span class="arr">→</span>
+      <div class="sp"><strong>③ 仍不够 → split</strong>拆成两页 + 改同层双向链表</div>
+      <span class="arr">→</span>
+      <div class="sp"><strong>④ 改父目录</strong>加/调「键+子页号」；根满需加层则造新根</div>
+    </div>
+
+    <table class="split-table">
+      <tr>
+        <th>插入方向</th>
+        <th>典型场景</th>
+        <th>怎么切</th>
+        <th>填充率</th>
+      </tr>
+      <tr>
+        <td><strong>往最右递增</strong><br><span style="color:var(--muted);font-size:11px;">PAGE_RIGHT</span></td>
+        <td>自增主键</td>
+        <td>旧页<strong>近乎满留下</strong>；<strong>右侧新开页</strong>接新行，后续更大键继续往最右页插</td>
+        <td class="ok">高（≈追加写）</td>
+      </tr>
+      <tr>
+        <td><strong>往最左递减</strong><br><span style="color:var(--muted);font-size:11px;">PAGE_LEFT</span></td>
+        <td>键越插越小</td>
+        <td>与上对称：旧页留满；<strong>左侧新开页</strong></td>
+        <td class="ok">高</td>
+      </tr>
+      <tr>
+        <td><strong>中间 / 随机</strong><br><span style="color:var(--muted);font-size:11px;">方向不清</span></td>
+        <td>UUID、乱序键</td>
+        <td>在插入点附近<strong>近似对半分</strong>；父页加分隔目录项</td>
+        <td class="bad">易偏低（半满页多）</td>
+      </tr>
+    </table>
+
+    <div class="split-mini">
+      <div class="sm">
+        <strong>下一条插哪？</strong>
+        仍按索引键走目录项下钻，落在谁的键区间就进谁。自增总落最右叶；最右叶满再按「右偏分裂」开新页。
+      </div>
+      <div class="sm">
+        <strong>叶子 vs 非叶子</strong>
+        规则相同。叶拆的是用户行（或二级：键+主键）；非叶拆的是目录项。只有贴叶的那层非叶，子页号才是叶子页号。
+      </div>
+      <div class="sm">
+        <strong>和「区」无关</strong>
+        分裂 = 逻辑页怎么拆、树怎么改；区 = 物理按 64×16KB 申请空间。凑满 64 页不会自动加树高。
+      </div>
+    </div>
+
+    <div class="split-one">
+      <strong>三句收束：</strong>
+      ① 先重排，不行再裂。
+      ② 自增 ≈ 右偏分裂：左满、右开新页接着写（不是固定 50/50）。
+      ③ 随机插中间 ≈ 对半分 → 更费空间；故聚簇主键宜短且顺序。
+    </div>
+  </div>
+
+  <!-- 树高与数据量估算公式 -->
+  <div class="cap-box">
+    <h2>树高 · 扇出 · 记录数估算 <span class="badge">先分清：树能装多少 ≠ 单表该放多少</span></h2>
+    <p class="intro">
+      常说「一张表两千万左右」——多半是<strong style="color:var(--text)">运维/业务经验阈值</strong>（备份、DDL、慢查、缓冲池），
+      <strong style="color:var(--text)">不是</strong> B+ 树三层装不下。树高公式算的是「物理上大概还能挂多少行」。
+    </p>
+
+    <div class="cap-vars">
+      <div class="cv"><strong>约定 H</strong>根=叶→1；根→叶→2；根→非叶→叶→3</div>
+      <div class="cv"><strong>F ≈ 1000</strong>非叶扇出（bigint 主键粗算）</div>
+      <div class="cv"><strong>R</strong>一叶多少行 = 有效页空间 / 行长</div>
+      <div class="cv"><strong>N ≈ F<sup>(H−1)</sup> × R</strong>写满时的物理上限</div>
+    </div>
+
+    <div class="cap-formula">
+      <div>有效页空间粗算 ≈ <span class="hl">15KB</span>（16KB 扣页头尾/目录）</div>
+      <div><span class="hl">R</span> ≈ 15KB / 平均行长　　<span class="hl">F</span> ≈ 1000</div>
+      <div style="margin-top:6px;"><span class="hl">N</span> ≈ F<sup>(H−1)</sup> × R　　非叶页数 ≈ (F<sup>(H−1)</sup> − 1)/(F − 1)（H=1 时为 0）</div>
+    </div>
+
+    <table class="cap-table">
+      <tr>
+        <th>行长假设</th>
+        <th>R（行/叶）</th>
+        <th>H=2 上限</th>
+        <th>H=3 上限</th>
+        <th>说明</th>
+      </tr>
+      <tr>
+        <td>偏瘦 ~200B</td>
+        <td>~80</td>
+        <td>~8 万</td>
+        <td class="num">~8000 万</td>
+        <td>字段少、无大列</td>
+      </tr>
+      <tr>
+        <td><strong>一般业务 ~500B</strong></td>
+        <td><strong>~30</strong></td>
+        <td><strong>~3 万</strong></td>
+        <td class="num"><strong>~3000 万</strong></td>
+        <td>更贴近常见表；再打折就靠近「两千万」</td>
+      </tr>
+      <tr>
+        <td>偏宽 ~1KB</td>
+        <td>~15</td>
+        <td>~1.5 万</td>
+        <td class="num">~1500 万</td>
+        <td>宽行 / 多索引列回表压力大</td>
+      </tr>
+    </table>
+
+    <div class="cap-ex">
+      <div class="ce">
+        <strong>为什么口头常说「2000 万」</strong>
+        ① 行往往不止 200B，还要算二级索引占空间；② 随机键填充率常只有七成；
+        ③ 备份、改表、刷脏、慢 SQL 在千万级就先痛了。
+        所以 <strong>~2000 万</strong>是「该不该分表」的经验线，不是树高天花板。
+      </div>
+      <div class="ce">
+        <strong>怎么和公式对上</strong>
+        一般行 ~500B、H=3：N≈1000²×30=<strong>3000 万</strong>物理上限；
+        再 ×0.7 填充 ≈ <strong>2000 万</strong>——这才是听起来「刚好两千万」的来源之一。
+        反推：L≈N/R；L≤1000→H=2；L≤100万→H=3。
+      </div>
+    </div>
+
+    <div class="cap-note">
+      <strong>记两套数：</strong>
+      树能力（一般行 ~500B）：H=3 大约还能挂到<strong>两三千万级</strong>（写满可更高）。
+      工程建议：单表常听到的<strong>~2000 万</strong>是体验/运维阈值——到了也未必炸树，但往往该考虑分库分表或归档。
+    </div>
+  </div>
+
+  <div class="flow-grid">
+    <div class="flow-card overflow">
+      <h3>行溢出：数据页 → 溢出页</h3>
+      <div class="flow-steps">
+        <div class="flow-step"><span class="dot"></span><span>叶子页 User Records 里发现大列需要外置</span></div>
+        <div class="flow-step"><span class="dot"></span><span>页内写入 <strong>20B 溢出页地址</strong>（Compact 还可能留前缀）</span></div>
+        <div class="flow-step"><span class="dot"></span><span>真正字节写入溢出页；不够再链下一张溢出页</span></div>
+        <div class="flow-step"><span class="dot"></span><span>读行时：先解析页内部分，再按指针拼出完整大列</span></div>
+      </div>
+    </div>
+    <div class="flow-card undo">
+      <h3>undo：当前行 → undo 页版本链</h3>
+      <div class="flow-steps">
+        <div class="flow-step"><span class="dot"></span><span>UPDATE/DELETE 时，先把旧版本信息写进 <strong>undo 页</strong></span></div>
+        <div class="flow-step"><span class="dot"></span><span>叶子行更新 trx_id，并把 <strong>roll_pointer</strong> 指到这条 undo</span></div>
+        <div class="flow-step"><span class="dot"></span><span>多次修改 → undo 记录互相串成<strong>版本链</strong></span></div>
+        <div class="flow-step"><span class="dot"></span><span>回滚：沿链恢复；MVCC 读：沿链找对 Read View 可见的版本</span></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="bridge">
+    读法：上半是<strong>物理包含</strong>与<strong>B+ 树分层</strong>；演进 / 分裂讲怎么长高、怎么拆页；
+    「树高估算」用 F、R 算不同 H 能扛多少行；下面两张卡是旁路——
+    <strong>溢出页</strong>补大字段，<strong>undo 页</strong>补历史版本。
+  </p>
+
+  <div class="bottom-card">
+    <h3>🧠 容易混在一起的点</h3>
+    <table class="compare-table">
+      <tr>
+        <th>概念 A</th>
+        <th>概念 B</th>
+        <th>区别</th>
+      </tr>
+      <tr>
+        <td>Compact 行布局</td>
+        <td>数据页七段结构</td>
+        <td>行格式是一行怎么排字节；页结构是一页怎么装很多行。行格式 ⊂ User Records</td>
+      </tr>
+      <tr>
+        <td>溢出页</td>
+        <td>undo 页</td>
+        <td>溢出页存大字段<strong>当前值</strong>的外置部分；undo 页存修改前的<strong>历史版本</strong>。两者都不是 B+ 树节点</td>
+      </tr>
+      <tr>
+        <td>Compact 溢出</td>
+        <td>Dynamic / Compressed 溢出</td>
+        <td>Compact：页内留部分前缀 + 20B 地址；Dynamic/Compressed：页内通常只留 20B 地址</td>
+      </tr>
+      <tr>
+        <td>roll_pointer</td>
+        <td>溢出页 20B 地址</td>
+        <td>roll_ptr 指向 undo（版本/回滚）；20B 指向溢出页（大列正文）</td>
+      </tr>
+      <tr>
+        <td>页有很多类型</td>
+        <td>B+ 树节点都是数据页</td>
+        <td>组成用户表 B+ 树的主要是数据页（根/非叶/叶）；溢出页、undo 页靠指针挂接，不算树的一层</td>
+      </tr>
+      <tr>
+        <td>树的上下层</td>
+        <td>同层页与页</td>
+        <td>上下层：目录项里的子页指针；同层：File Header 双向链表（范围扫）</td>
+      </tr>
+      <tr>
+        <td>双向链表</td>
+        <td>单向链表</td>
+        <td>页↔页：双向（File Header）；行↔行：单向（next_record）</td>
+      </tr>
+      <tr>
+        <td>索引段 / 数据段</td>
+        <td>非叶子 / 叶子</td>
+        <td>同一件事两种说法：非叶 ↔ 索引段；叶 ↔ 数据段</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="summary">
+    <strong>一句话收束：</strong>
+    .ibd 按段、区切出许多 16KB 页；其中<strong>数据页</strong>按 B+ 树分层（根/非叶在索引段，叶子在数据段）完成跨页定位；
+    叶子 User Records 按 Compact / Dynamic 排字节——大列可经 20B 落到溢出页，历史版本经 roll_pointer 落到 undo 页；
+    上下层靠目录项找子页，同层靠双向链表扫相邻页，页内靠单向链表 + 页目录找行。
+  </div>
+
+  <p class="foot">双击本文件即可在浏览器中查看 · 纯 HTML/CSS · 无外部依赖</p>
+</div>
+
+</body>
+</html>
