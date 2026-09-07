@@ -1,6 +1,6 @@
 **总结：**
 
-- 注解是`Annotation`子接口；RUNTIME类型的注解进`.class`属性表；反射触发`AnnotationParser`解析，返回带`AnnotationInvocationHandler`的动态代理；调属性就是查动态代理的Map。框架（Spring等）本质也是反射扫描这些RUNTIME注解。
+- 注解就是一种标签，用来提供信息。将注解贴到类/方法/字段上并写参数；编译后RUNTIME注解会留在类/方法/字段的.class的属性表中。运行时，反射把属性表中的注解信息读出来然后通过`AnnotationvoParser`解析进`memberValues`这个Map中，并生成一个动态代理对象；这样就可以为后续框架比如Spring、AOP提供信息去做注入、拦截、增强。
 
 
 
@@ -10,8 +10,12 @@
 - 将注解绑定到某个类/方法/字段上，并填充注解的参数，比如（value="xxx"）
 - 编译成`.class`文件时，若是`RUNTIME`策略。将注解信息写进对应类/方法/字段的`.class`文件的属性表。类加载后 JVM 可读
 - 运行时，反射拿到属性表里注解原始数据，通过`AnnotationParser`解析成Map（注解属性），再生成注解的动态代理包装
-- 调用`注解.value()`时，等于调用动态代理的`invoke`， `invoke`从handler中的Map取值
-- 然后框架再消费这些元数据，比如Spring 反射扫描做注入/扫描Bean；或用AOP切面，按切点拦截带这个注解的类/方法/字段，然后进行额外的操作（数据增强）。
+- 调用`注解.value()`时，等于调用动态代理的`invoke`， `invoke`从handler中的Map取对应值
+- 然后框架再消费这些元数据，比如Spring 根据读到的信息去做注入、AOP拦截、增强。
+
+
+
+
 
 
 
