@@ -1,0 +1,29 @@
+- Lambda表达式
+  - 简化匿名内部类，支持函数式编程
+  - (a,b) -> a + b代替匿名类实现接口
+- 函数式接口
+  - 仅含一个抽象方法的接口，可用`@FunctionalInterface`注解标记
+  - `Runable`,`Comparator`或自定义接口`@FunctionalInterface interface MyFunc {void run();}`
+- Stream API
+  - 提供链式操作处理集合数据，支持并行处理
+  - `list.stream().filter(x -> x > 0).collect(Collectors.toList());`
+- Optional 类
+  - 封装可能为`null`的对象，减少空指针异常
+  - `Optional.ofNullable(value).orElse("default")`
+- 方法引用
+  - 简化`Lambda`表达式，直接引用现有方法
+  - `System.out::println`等价于`x -> System.out.println(x)`
+- 接口的默认方法和静态方法
+  - 接口可定义默认实现和静态方法，增强扩展性
+- 并行数组排序
+  - 使用多线程加速数组排序
+  - `Arrays.parallelSort(array)`
+- 重复注解
+  - 允许同一位置多次使用相同注解
+  - `@Repeatable`注解配合容器注解使用
+- 类型注解
+  - 注解可应用于更多位置，如泛型、异常
+  - `List<@NonNull String> list`
+- Completable Future
+  - 增强异步编程能力，支持链式调用和组合操作
+  - `CompletableFuture.supplyAsync(() -> "result").thenAcept(System.out:println)`
