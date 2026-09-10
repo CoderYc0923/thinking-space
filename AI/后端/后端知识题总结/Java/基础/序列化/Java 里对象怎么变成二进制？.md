@@ -1,0 +1,9 @@
+- 首先要有**约定好的格式**（协议），**按格式**写字节 / 按格式读回来。
+- `JDK`写法就三步
+  - 类实现 `Serializable`（或 `Externalizable`）
+  - 序列化：`ObjectOutputStream.writeObject(obj)`
+  - 反序列化：`ObjectInputStream.readObject()` 再强转回来
+- 细节
+  - 类没有实现`Serializable`（或 `Externalizable`），抛出异常
+  - `static`、`transient` 字段默认不进序列化
+  - 要序列化的字段类型自己也得能序列化（引用链都要能序列化）

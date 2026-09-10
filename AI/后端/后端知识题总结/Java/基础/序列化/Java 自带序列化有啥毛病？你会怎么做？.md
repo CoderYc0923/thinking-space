@@ -1,0 +1,5 @@
+- `JDK `自带（`Serializable` + `ObjectOutputStream`）图省事，但坑不少：
+  - **不跨语言**，只有 Java 认这套格式
+  - **不安全**，`readObject` 在反序列化的过程中，可以执行任意类型的代码，容易被恶意脚本攻击
+  - **序列化后的流太大**，影响带宽、磁盘，性能
+- 简单场景用`Jackson / FastJson`等，跨服务用`Protobuf`
