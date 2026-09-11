@@ -1,0 +1,2 @@
+- JNI（**Java Native Interface**）
+  - 它是Java用来调用本地库的官方接口，可以让Java调用C/C++等本地代码写的函数，也可以让本地代码回调Java
