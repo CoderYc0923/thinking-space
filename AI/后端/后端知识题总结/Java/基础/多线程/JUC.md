@@ -1,0 +1,15 @@
+- **Java中的一个并发工具包**：`java.util.concurrent.*`
+
+- **常用的**：
+  - **线程池：**
+    - `ThreadPoolExecutor`：最核心的线程池类，用于创建和管理线程池。通过它可以灵活配置线程池参数，如核心线程数、最大线程数、任务队列等。
+    - `Executors`：线程池工厂类，提供一系列静态方法来创建不同类型的线程池，如：`newFixedThreadPool（创建固定线程数的线程池）`,`newCachedThreadPool（创建可缓存线程池）`,`newSingleThreadExecutor（创建单线程线程池）`等。
+  - **并发集合：**
+    - `ConcurrentHashMap`：多线程Map
+    - `CopyOnWriteArrayList`：读多写少的List，线程安全。
+  - **协作工具：**
+    - `CountDownLatch`：让一个或多个线程等待其他一组线程完成后再继续执行（倒计时，用一次）
+    - `CyclicBarrier`：一组线程互相等齐再做（可重复用）
+    - `Semaphore`：限流，控制同时访问某个资源的线程数量
+  - **原子类：**`java.util.concurrent.atomic`
+    - `AtomicInteger`，`AtomicLong`等，给单个变量做复合操作时，不用自己加锁。
