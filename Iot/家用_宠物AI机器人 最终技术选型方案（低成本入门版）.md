@@ -91,11 +91,11 @@
 | ---- | ---- | ---- |
 | AI/机器人业务 | **Python** | ROS2 原生、LLM/YOLO/语音/Agent 生态最全；行业原型主流 |
 | 管理后台（可选、后期） | Java | 适合后台管理，**不适合**当 AI+机器人实时业务主后端 |
-| 机器人框架 | **ROS2 Humble** | SLAM、自主导航、避障、传感器、运动调度 |
+| 机器人框架 | **ROS2 Jazzy**（Ubuntu 24.04） | SLAM、自主导航、避障、传感器、运动调度；配套 Gazebo Harmonic |
 | 通信 | **MQTT 局域网** | 核心总线 |
 | 前端 | **Vue3 + Three.js** | 复用你最强技能：状态面板、实时画面、地图、3D、指令、语音入口 |
 | 存储 | 原型 SQLite + Redis；产品化可 PostgreSQL | |
-| 仿真 | **Gazebo** 家庭场景 | 0 成本先跑通 AI+导航，再上实体 |
+| 仿真 | **Gazebo Harmonic**（`ros-jazzy-ros-gz`）家庭场景 | 0 成本先跑通 AI+导航，再上实体 |
 
 ### 4.2 原型期 AI（可更大、更爽，只跑在你 PC 上）
 
@@ -278,7 +278,7 @@
 | ---- | ---- |
 | Python 基础 + 异步/进程 | 接 ROS2、模型、MQTT 服务 |
 | MQTT | 内网总线 |
-| ROS2 Humble（先仿真） | 导航、节点、话题 |
+| ROS2 Jazzy（先仿真，Ubuntu 24.04） | 导航、节点、话题 |
 | Ollama / 本地 LLM 调用 | 大脑原型 |
 | YOLO 推理调用 | 视觉 |
 | Whisper + Piper | 语音 |
@@ -286,3 +286,5 @@
 | （产品期）Android/iOS 本地推理 或 RKNN | 路线 D / C |
 
 **近期最小闭环（不买高端板也能做）**：Gazebo + MQTT + Python AI 服务 + Vue 面板 → 再买带 WiFi 的 ROS2/Micro-ROS 入门小车。
+
+> 软件/语言清单与 Windows 安装步骤见同目录：`阶段A_软件清单与安装教程.md`。
