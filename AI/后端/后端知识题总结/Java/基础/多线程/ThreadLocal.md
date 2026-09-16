@@ -1,0 +1,12 @@
+- **作用**：**线程隔离**，**给每个线程一份独立变量副本**，线程之间互不影响，**不用加锁也能避免共享冲突**
+- **场景**：
+  - **用户上下文/租户信息**（同线程里层层传递）
+  - 数据库连接、`SimpleDateFormat`等**一线程一份**的对象
+  - 链路追踪`TraceId`
+- **原理**：
+  - `ThreadLocal`依赖于每个线程的`ThreadLocalMap`，这个Map用来存储该线程所持有的所有`ThreadLoacl`变量的值。当调用`get`方法时，`ThreadLocal`会先检查当前线程的`ThreadLocalMap`中是否有值，若有则返回，没有就会调用`initalValue`方法（如果重写了的话）来初始化该值，然后将其放入`ThreadLocalMap`并返回。当调用`set`方法时，`ThreadLocal`会在当前线程的`ThreadLocalMap`中存储一个键值对，键是`ThreadLocal`对象本身，值是传入的值。当调用`remove`方法时，会从当前线程的`ThreadLocalMap`中移除与该`ThreadLocal`对象关联的条目
+- **内存泄漏问题：**
+  - `ThreadLocalMap.Entry`的`key`是对`ThreadLocal`的弱引用、`value`是强引用。当外部不再持有value时，下一次`GC`就会把`Entry`的`key`置为`null`，但此时`value`仍然被`Entry`强引用，所以会产生内存泄漏
+  - 只有当线程后续再次调用`set`/`get`/`remove`时，`ThreadLocalMap`才会触发`expungeStaleEntries`扫描清理这些`key`为`null`的过期`Entry`；如果线程被线程池长期复用却不在调用这个`ThreadLocal`，`value`就会一直驻留
+  - 所以在使用`ThreadLocal`后，必须显式调用`remove`主动清除。
+
