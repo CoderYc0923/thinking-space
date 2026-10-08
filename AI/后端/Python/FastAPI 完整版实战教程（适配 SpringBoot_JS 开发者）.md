@@ -453,3 +453,7 @@ Windows 上 uvicorn 多 worker 支持较差，本机开发用 `--reload` 即可�
 4. **日志、配置文件**：全局日志、`.env`（对标 `application.yml`）
 5. **数据库迁移**：Alembic 对标 Flyway
 6. **AI 接口开发**：模型推理、SSE / 流式返回（FastAPI 核心强项）
+
+实战续篇（后台管理 Demo：登录 JWT + 用户 CRUD + 秒杀 Redis + MySQL）见：
+
+→ [FastAPI 后台管理实战教程（登录JWT_用户CRUD_秒杀Redis_MySQL）](./FastAPI%20后台管理实战教程（登录JWT_用户CRUD_秒杀Redis_MySQL）.md)
