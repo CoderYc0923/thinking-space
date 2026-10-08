@@ -33,6 +33,13 @@
 fastApiDemo/
 ├── main.py
 ├── .env                      # 配置（对标 application.yml）
+├── docker-compose.yml        # 本地 MySQL（Docker Compose）
+├── sql/                      # 手写 DDL（人读/评审）
+│   └── V001__create_sys_user.sql
+├── alembic.ini               # Alembic（对标 Flyway：按版本执行 SQL）
+├── alembic/
+│   ├── env.py                # 注入 MYSQL_URL
+│   └── versions/             # 迁移里贴手写 SQL（提交 Git）
 ├── pyproject.toml            # 项目依赖（对标 pom.xml / package.json）
 ├── poetry.lock               # 锁版本（对标 package-lock.json）
 ├── core/                     # 横切能力
@@ -117,7 +124,7 @@ poetry env use 3.12
 ```bash
 poetry add "fastapi[standard]" sqlalchemy pymysql cryptography
 poetry add "python-jose[cryptography]" "passlib[bcrypt]" pydantic-settings
-poetry add redis
+poetry add redis alembic
 ```
 
 装完后项目里会有：
@@ -152,6 +159,7 @@ poetry show
 | passlib[bcrypt] | 密码哈希 | BCryptPasswordEncoder |
 | pydantic-settings | 读 `.env` | `@ConfigurationProperties` |
 | redis | Redis 客户端 | Spring Data Redis |
+| alembic | 按版本执行手写 DDL（生产必用） | Flyway / Liquibase |
 
 `.env` 示例：
 
@@ -640,9 +648,13 @@ return 1      -- 成功
 
 ### Step 1：配置与数据库骨架
 
-1. 加 `.env`、`core/config.py`、`core/database.py`  
-2. 建库建表（或 `Base.metadata.create_all`）  
-3. 启动时确保能 `get_db()` 连上 MySQL  
+> 手敲细步骤（含 Docker Compose 起 MySQL）：[Step1_配置与数据库骨架（Docker_MySQL手敲）](./Step1_配置与数据库骨架（Docker_MySQL手敲）.md)
+
+1. 写 `docker-compose.yml`，`docker compose up -d` 启动 MySQL  
+2. 加 `.env`、`core/config.py`、`core/database.py`  
+3. **先手写** `sql/V001__....sql`，再写 ORM Entity（**只映射，对齐 SQL**）  
+4. Alembic：`revision`（不加 `--autogenerate`）→ 把 SQL 贴进 `upgrade()` → `upgrade head`  
+5. `main.py` **禁止** `create_all` / 启动改表（本教程不要求健康检查接口）  
 
 ### Step 2：JWT 登录
 
@@ -671,23 +683,24 @@ return 1      -- 成功
 ### Step 5：收尾
 
 1. CORS 改成真实前端源  
-2. 确认 `pyproject.toml` + `poetry.lock` 已提交（版本锁定）  
-3. README 写启动步骤：MySQL / Redis / `poetry install` / `poetry run uvicorn ...`  
+2. 确认 `pyproject.toml` + `poetry.lock` + `alembic/versions/*` 已提交  
+3. README 写启动步骤：MySQL / Redis / `poetry install` / `alembic upgrade head` / `uvicorn`  
 
 ---
 
-## 九、main.py 挂载示意
+## 九、main.py 挂载示意（生产向）
+
+**不要**在应用启动时 `Base.metadata.create_all`。  
+Schema：**手写 SQL** + Alembic 按版本执行（本教程**默认不用** `--autogenerate`）。  
+发布：`alembic upgrade head` → 再启应用。
 
 ```python
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routers import auth, user, seckill
-from core.database import Base, engine
 
 app = FastAPI(title="后台管理 Demo", version="2.0.0")
-
-Base.metadata.create_all(bind=engine)  # Demo 可用；正式环境改用 Alembic
 
 app.add_middleware(
     CORSMiddleware,
@@ -702,7 +715,14 @@ app.include_router(user.router)
 app.include_router(seckill.router)
 ```
 
-（全局异常处理保持你现有写法即可。）
+本地 / 部署前执行：
+
+```bash
+poetry run alembic upgrade head
+poetry run uvicorn main:app --reload --port 8000
+```
+
+（全局异常处理保持你现有写法即可。Alembic 手敲细节见 Step1 文档。）
 
 ---
 
@@ -711,7 +731,8 @@ app.include_router(seckill.router)
 | 场景 | SpringBoot | FastAPI Demo |
 |---|---|---|
 | 配置 | `application.yml` | `.env` + `pydantic-settings` |
-| 实体 | `@Entity` / DO | SQLAlchemy `Mapped` |
+| 对象映射 | MyBatis / JPA `@Entity` | SQLAlchemy Entity（只映射，对齐手写 SQL） |
+| 库表变更 | 手写 SQL + Flyway | **手写 SQL + Alembic 执行**（禁用 create_all；不盲跑 autogenerate） |
 | Mapper/Repo | MyBatis / JPA | `Session` + query |
 | 密码加密 | `BCryptPasswordEncoder` | `passlib` bcrypt |
 | JWT 签发 | `Jjwt` / Auth0 | `python-jose` |
@@ -727,6 +748,7 @@ app.include_router(seckill.router)
 - [ ] 能解释 HS256 验签过程，以及 `exp` 过期如何导致 401  
 - [ ] 登录后用 `Authorization: Bearer` 访问受保护接口  
 - [ ] 用户 CRUD 全部走 MySQL，密码仅存哈希  
+- [ ] 能手写 DDL，用 Alembic 执行迁移；Entity 与 SQL 对齐；不用启动时 `create_all`  
 - [ ] 秒杀预热后，扣库存以 Redis 为准，且不超卖、不重复买  
 - [ ] 知道 Demo 与真实秒杀的差距  
 
@@ -734,8 +756,8 @@ app.include_router(seckill.router)
 
 ## 十二、下一步
 
-1. **先读本文第三章（JWT 原理）**，再动手 Step 1～2  
-2. 代码实现时继续改 `fastApiDemo`，不要新开空项目  
-3. 做完后可再补：Alembic 迁移、角色权限、Refresh Token、操作日志  
+1. **先完成 Step 1（手写 SQL + ORM 映射 + Alembic 执行）**，再读 JWT，动手 Step 2  
+2. 继续改 `fastApiDemo`，按生产习惯（密钥、脱敏、统一响应、迁移有版本）  
+3. 可再补：角色权限、Refresh Token、操作日志、CI 执行 `alembic upgrade head`  
 
 若需要，我可以在下一阶段**直接按本文 Step 顺序，把 `fastApiDemo` 代码骨架生成出来**（先登录 + 用户 CRUD，再秒杀）。
