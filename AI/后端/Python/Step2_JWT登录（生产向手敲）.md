@@ -672,7 +672,7 @@ GET /auth/me
 - [ ] 错密 / 无 token / 坏 token / 禁用用户 均 401  
 - [ ] `main.py` 未在启动时建表  
 
-全部勾完 → 进入 **Step 3：用户 CRUD**（所有写接口加 `Depends(get_current_user)`）。
+全部勾完 → 进入 **[Step 3：用户 CRUD（生产向手敲）](./Step3_用户CRUD（生产向手敲）.md)**。
 
 ---
 

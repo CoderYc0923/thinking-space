@@ -668,11 +668,13 @@ return 1      -- 成功
 
 ### Step 3：用户 CRUD
 
-1. 替换现在假的 `user_service`  
-2. 列表分页、增删改查  
-3. VO 脱敏（无 password）  
+> 手敲细步骤（生产向）：[Step3_用户CRUD（生产向手敲）](./Step3_用户CRUD（生产向手敲）.md)
 
-**验收**：用 admin 登录后完整走一遍 CRUD。
+1. 真实 `user_service`：分页 / 详情 / 新增 / 更新 / 软删  
+2. 全部 `Depends(get_current_user)`；VO 无 password；密码 bcrypt  
+3. 用户名冲突、防删自己、路由顺序（`/list` 在 `/{id}` 前）  
+
+**验收**：admin 登录后完整走通 CRUD；无 token 401；软删后列表不可见。
 
 ### Step 4：秒杀 + Redis
 
