@@ -658,11 +658,13 @@ return 1      -- 成功
 
 ### Step 2：JWT 登录
 
-1. 实现 `security.py`（哈希 + 签发 + 解析）  
-2. `POST /auth/login`、`GET /auth/me`  
-3. 用 `/docs` 点 Authorize，粘贴 token，验证鉴权  
+> 手敲细步骤（生产向）：[Step2_JWT登录（生产向手敲）](./Step2_JWT登录（生产向手敲）.md)
 
-**验收**：错误密码 401；正确密码拿到 token；无 token 访问 `/user/list` 被拒。
+1. `security.py`（bcrypt + JWT）+ `deps.get_current_user`  
+2. `POST /auth/login`、`GET /auth/me`（VO 不含密码）  
+3. 种子管理员；`/docs` Authorize 验收鉴权  
+
+**验收**：错密/无 token/坏 token/禁用用户 → 401；登录成功拿 token；`/me` 脱敏成功。
 
 ### Step 3：用户 CRUD
 

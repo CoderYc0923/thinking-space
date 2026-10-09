@@ -2,13 +2,12 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import user
+from routers import api_router
 from utils.response import Result
 
 app = FastAPI(title="demo", description="this is a demo api", version="1.0.0")
 
-# 注册路由
-app.include_router(user.router)
+app.include_router(api_router)
 
 # 跨域配置
 app.add_middleware(

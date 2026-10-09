@@ -609,7 +609,7 @@ docker compose exec mysql mysql -uroot -proot123456 -e "SHOW TABLES; DESC sys_us
 - [ ] 库中有 `sys_user`  
 - [ ] `main.py` 无 `create_all`  
 
-→ 进入 **Step 2：JWT 登录**。
+→ 进入 **[Step 2：JWT 登录（生产向手敲）](./Step2_JWT登录（生产向手敲）.md)**。
 
 ---
 
