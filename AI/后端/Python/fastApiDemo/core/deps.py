@@ -4,8 +4,10 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from jose import JWTError
+from redis import Redis
 
 from core.database import get_db
+from core.redis_client import get_redis
 from core.security import decode_access_token
 from models.user import UserEntity
 
@@ -42,5 +44,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     
     return user
+
+def get_redis_dep() -> Redis:
+    return get_redis()
 
 

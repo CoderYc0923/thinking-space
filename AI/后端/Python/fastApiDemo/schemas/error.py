@@ -12,3 +12,11 @@ class NotFoundError(AppError):
 class ConflictError(AppError):
     def __init__(self, message: str = "资源冲突", code: int = 409) -> None:
         super().__init__(message, code)
+
+class SeckillSoldOutError(AppError):
+    def __init__(self, message: str = "秒杀已售罄", code: int = 409) -> None:
+        super().__init__(message, code)
+
+class SeckillAlreadyBoughtError(AppError):
+    def __init__(self, message: str = "您已购买过该商品", code: int = 409) -> None:
+        super().__init__(message, code)

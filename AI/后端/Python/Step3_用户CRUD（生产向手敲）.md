@@ -517,7 +517,7 @@ poetry run uvicorn main:app --reload --port 8000
 - [ ] 不能删除当前登录用户  
 - [ ] `/list`、`/info` 在 `/{id}` 之前注册  
 
-→ 下一阶段：**Step 4 秒杀 + Redis**（主教程第七章）。
+→ 下一阶段：**[Step 4：秒杀 + Redis（生产向手敲）](./Step4_秒杀Redis（生产向手敲）.md)**。
 
 ---
 

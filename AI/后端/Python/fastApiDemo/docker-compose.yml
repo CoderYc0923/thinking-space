@@ -16,5 +16,20 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7.2
+    container_name: fastapi-demo-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - py_demo_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   py_demo_mysql_data:
+  py_demo_redis_data:

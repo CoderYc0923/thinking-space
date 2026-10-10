@@ -90,6 +90,7 @@ class UserService:
 
         entity = UserEntity(
             username=dto.username,
+            password=hash_password(dto.password),
             nickname=dto.nickname,
             age=dto.age,
             email=dto.email,
