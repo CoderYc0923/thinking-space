@@ -80,6 +80,7 @@ class SeckillService:
             raise AppError("商品不存在")
         
         # redis lua 原子扣减库存
+        # eval：执行lua脚本，参数：脚本，key数量，脚本中的KEYS[1]、KEYS[2]、...，脚本中的ARGV[1]
         res = int(r.eval(SECKILL_BUY_LUA, 2, sk, bk, str(user_id)))
 
         if res == -1:
