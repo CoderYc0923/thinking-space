@@ -1,0 +1,9 @@
+- 由jvm引起的OOM场景
+  - 可能堆内存泄漏（集合/缓存无限增长、监听器未移除、ThreadLocal未清理）
+  - 无界缓存（本地Cache无上限、无过期；Guava/Caffeine配置不当）
+  - 堆过小（-Xmx，相对业务峰值不够或负载上涨后未扩容）
+  - 大对象/一次加载过多（超大List、一次性读全表进内存、导出未分页）
+  - 元空间泄漏（动态代理/热加载/脚本引擎反复生成类；-XX:MaxMetaspaceSize过小）
+  - 直接内存/堆外（Netty/NIO DirectByteBuffer、未限制 -XX:MaxDirectMemorySize）
+  - 本地内存（非堆）（JNI、压缩包、某些驱动；堆看着不大但RSS暴涨）`RSS指的是Resident Set Size，常驻集大小。指进程当前实际占用的物理内存RAM`
+  - 内存碎片/晋升失败（老年代碎片或分配失败触发OOM（相对少见，看GC日志））

@@ -1,0 +1,18 @@
+{
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-1.8",
+      "path": "D:\\Java\\jdks\\jdk-8.0.504.1-hotspot"
+    },
+    {
+      "name": "JavaSE-21",
+      "path": "D:\\Java\\jdks\\jdk-21.0.11_10",
+      "default": true
+    }
+  ],
+  "java.jdt.ls.java.home": "D:\\Java\\jdks\\jdk-21.0.11_10",
+  "terminal.integrated.env.windows": {
+    "JAVA_HOME": "D:\\Java\\jdks\\jdk-21.0.11_10",
+    "PATH": "D:\\Java\\jdks\\jdk-21.0.11_10\\bin;${env:PATH}"
+  }
+}
