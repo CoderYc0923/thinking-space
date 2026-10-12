@@ -1,2 +1,5 @@
-- JNI（**Java Native Interface**）
-  - 它是Java用来调用本地库的官方接口，可以让Java调用C/C++等本地代码写的函数，也可以让本地代码回调Java
+- **JNI（Java Native Interface）**：Java 与本地代码互调的**官方接口规范**（由 JVM 支持）。
+  - Java 可调用 C/C++ 等写的本地函数
+  - 本地代码也可回调 Java 方法
+- 常见用途：高性能计算、调用系统 API、复用已有 C/C++ 库、访问硬件相关能力
+- 和 `native`：方法用 `native` 声明 → 通过 JNI 约定实现并挂到 JVM 上

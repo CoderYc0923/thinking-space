@@ -1,17 +1,18 @@
-- Java中，native方法是一种特殊类型的方法，它**允许java代码调用外部的本地代码**，即用C、C++或其他语言编写的代码。
+- Java 中，`native` 方法允许 Java 代码调用外部本地代码（C/C++ 等）。
 
-- native关键字是java语言中的一种声明，用于标记一个方法的实现将在外部定义，没有实际的实现代码。
+- `native` 关键字只做声明，方法体在外部实现：
 
-  - ```java
-    public class NativeExample {
-        public native void nativeMethod();
-    }
-    ```
+  ```java
+  public class NativeExample {
+      public native void nativeMethod();
+  }
+  ```
 
-- **实现**：
+- **实现步骤**
 
-  - **生成JNI头文件**：使用`javac -h <dir>`选项从Java类生成C/C++的头文件，这个头文件包含了所有native方法的原型（旧的独立工具`javah`自`java9`废弃，改用`javac -h`）
-  - **编写本地代码**：使用C/C++编写本地方法的实现，并确保方法签名与生成的头文件中的原型匹配。
-  - **编译本地代码**：将C/C++代码编译成动态链接库（DDL，Windows上），共享库（SO，在Linux上）
-  - **加载本地库**：在Java程序中，使用`System.loadLibrary()`方法来加载编译好的本地库，这样JVM就能找到并调用native方法的实现了。
+  1. **生成 JNI 头文件**：`javac -h <dir>`（旧工具 `javah` 自 Java 9 废弃）
+  2. **编写本地代码**：C/C++ 实现，签名与头文件一致
+  3. **编译本地库**：Windows → `.dll`，Linux → `.so`，macOS → `.dylib`
+  4. **加载本地库**：`System.loadLibrary(...)`，JVM 才能找到并调用 native 实现
 
+- 和 JNI 的关系：`native` 是语言层声明；**JNI** 是 JVM 规定的、Java 与本地代码互调的官方接口规范。
