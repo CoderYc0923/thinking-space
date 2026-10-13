@@ -285,6 +285,17 @@ jcmd <pid> GC.class_histogram | more
 
 ### 5.2 启动命令
 
+**推荐：直接跑脚本**
+
+```powershell
+cd Java/进阶/jvm排查/diagnostics
+.\run-deadlock.ps1
+```
+
+或双击 `run-deadlock.cmd`。笔记见同目录 `卡死无响应大面积超时-jvm.md`。
+
+**等价手工命令**（在 `diagnostic-lab` 目录下）：
+
 ```bash
 java -cp target/diagnostic-lab-1.0-SNAPSHOT.jar ^
   dev.abykov.pets.diagnostic_lab.MainApp deadlock
