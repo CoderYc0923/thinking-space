@@ -1,0 +1,6 @@
+# Heap dumps and MAT analysis artifacts (too large for GitHub)
+*.hprof
+diagnostics/oomdump*
+!diagnostics/oom-jvm.md
+!diagnostics/run-oom.ps1
+!diagnostics/run-oom.cmd

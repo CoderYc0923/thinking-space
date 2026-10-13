@@ -124,13 +124,50 @@ mkdir diagnostics
 
 Windows PowerShell 同样可用；路径按本机改。
 
+> **注意**：编译完成 ≠ 进程已启动。此时只是打好了 jar，**还没有 Java 业务进程**，所以下一步先不要急着找 PID。
+
 ### 3.4 找进程 PID（所有场景通用）
 
+**必须先启动某个场景**（见下文 memory / deadlock / gc 的 `java ... MainApp xxx`），进程起来之后，再**另开一个终端**查 PID。
+
 ```bash
+# 终端 1：保持运行，不要关（示例：死锁场景，进程会一直挂着）
+java -cp target/diagnostic-lab-1.0-SNAPSHOT.jar ^
+  dev.abykov.pets.diagnostic_lab.MainApp deadlock
+
+# 终端 2：再执行
 jps -l
 ```
 
-记下 `MainApp` 对应的 PID，后面 `jcmd` / `jstack` 都用它。
+示例输出（数字是 PID，每台机器不同）：
+
+```text
+12345 dev.abykov.pets.diagnostic_lab.MainApp
+12346 jdk.jcmd/sun.tools.jps.Jps
+```
+
+记下带 `MainApp` 那一行的数字（如上例 `12345`），后面 `jcmd` / `jstack` / `jstat` 都用它。
+
+**为什么刚编译完 jps 没有 MainApp？**
+
+| 时机 | jps 里有没有 MainApp |
+|------|----------------------|
+| 只执行了 `mvn package` | ❌ 没有，正常 |
+| 已 `java ... MainApp xxx` 且窗口还在跑 | ✅ 有 |
+| memory 场景已经 OOM 退出 | ❌ 进程没了，PID 消失（改用已生成的 `.hprof`） |
+| 终端被关掉 / Ctrl+C | ❌ 进程结束，需重新启动场景 |
+
+**Windows 额外提示**：
+
+- `jps` 要用 **JDK 的 bin**，不要只用 JRE；PowerShell 里可先 `where.exe java` / `where.exe jps`
+- 若 `jps -l` 几乎是空的，确认终端 1 的 `java` 命令还在前台跑、没有立刻报错退出
+- 主类全限定名以仓库实际代码为准；认不出包名时，看 `jps -l` 里带 `diagnostic` / `MainApp` 的那行即可
+
+正确顺序永远是：
+
+```text
+编译 jar → 启动场景(终端1) → jps 查 PID(终端2) → jstack/jcmd/jstat 采证
+```
 
 ---
 
@@ -148,17 +185,44 @@ GC Roots（静态集合 / 局部变量等）
 
 ### 4.2 启动命令
 
+**推荐：直接跑脚本**（dump 会写到本目录 `diagnostics/oomdump.hprof`）
+
+```powershell
+cd Java/进阶/jvm排查/diagnostics
+.\run-oom.ps1
+```
+
+或双击同目录下的 `run-oom.cmd`。
+
+若提示无法运行脚本，可先执行一次：
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+脚本会自动找上级目录里的 `diagnostic-lab/target/diagnostic-lab-1.0-SNAPSHOT.jar`；找不到时先去 lab 目录执行 `mvn -DskipTests package`。
+
+注意两点：
+
+1. **主类是** `dev.abykov.pets.diagnostic_lab.MainApp`（上游 README 多写了 `.demo`，已按实际 jar 修正）
+2. **要用 JDK 17+**：本机 PATH 若默认 Java 8，脚本会优先用 `D:\Java\jdks\jdk-21.0.11_10\bin\java.exe`；也可手动指定：
+
+```powershell
+$env:DIAG_JAVA = "D:\Java\jdks\jdk-21.0.11_10\bin\java.exe"
+.\run-oom.ps1
+```
+
+**等价手工命令**（在 `diagnostic-lab` 目录下）：
+
 ```bash
 java -Xms256m -Xmx256m ^
   -XX:+HeapDumpOnOutOfMemoryError ^
-  -XX:HeapDumpPath=./diagnostics/oomdump.hprof ^
+  -XX:HeapDumpPath=../diagnostics/oomdump.hprof ^
   -cp target/diagnostic-lab-1.0-SNAPSHOT.jar ^
-  dev.abykov.pets.diagnostic_lab.demo.MainApp memory
+  dev.abykov.pets.diagnostic_lab.MainApp memory
 ```
 
-Linux / macOS 把 `^` 换成 `\`。
-
-若主类包路径与 README 不一致，以仓库实际 `MainApp` 为准；参数 `memory` 不变。
+Linux / macOS 把 `^` 换成 `\`。主类以仓库实际为准；参数 `memory` 不变。
 
 ### 4.3 预期现象
 
@@ -166,11 +230,16 @@ Linux / macOS 把 `^` 换成 `\`。
 2. 最终 `java.lang.OutOfMemoryError: Java heap space`  
 3. `diagnostics/oomdump.hprof`（或你配置的路径）生成
 
+> **PID 时机**：memory 场景堆很小，可能几十秒内就 OOM 退出。想练 `jps`/`jcmd` 时，启动后立刻开第二个终端抓 PID；若已经退出，属正常，直接分析 `.hprof` 即可。练「活进程查 PID」更推荐先跑 **deadlock**（会一直挂着）。
+
 ### 4.4 采证与分析步骤
 
 **步骤 1：进程还活着时（可选）**
 
+另开终端：
+
 ```bash
+jps -l
 jcmd <pid> GC.class_histogram | more
 ```
 
@@ -218,7 +287,7 @@ jcmd <pid> GC.class_histogram | more
 
 ```bash
 java -cp target/diagnostic-lab-1.0-SNAPSHOT.jar ^
-  dev.abykov.pets.diagnostic_lab.demo.MainApp deadlock
+  dev.abykov.pets.diagnostic_lab.MainApp deadlock
 ```
 
 ### 5.3 预期现象
@@ -279,7 +348,7 @@ VisualVM：选中进程 → Threads → Thread Dump。
 java -Xms256m -Xmx256m -XX:+UseG1GC ^
   -Xlog:gc*:file=./diagnostics/gc.log:time,uptime,level,tags ^
   -cp target/diagnostic-lab-1.0-SNAPSHOT.jar ^
-  dev.abykov.pets.diagnostic_lab.demo.MainApp gc
+  dev.abykov.pets.diagnostic_lab.MainApp gc
 ```
 
 若本机 JDK 对 `-Xlog` 不熟，可先用仓库 README 的 `-Xloggc:./diagnostics/gc.log`，效果类似。

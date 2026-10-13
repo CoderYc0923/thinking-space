@@ -7,3 +7,31 @@
   - 直接内存/堆外（Netty/NIO DirectByteBuffer、未限制 -XX:MaxDirectMemorySize）
   - 本地内存（非堆）（JNI、压缩包、某些驱动；堆看着不大但RSS暴涨）`RSS指的是Resident Set Size，常驻集大小。指进程当前实际占用的物理内存RAM`
   - 内存碎片/晋升失败（老年代碎片或分配失败触发OOM（相对少见，看GC日志））
+
+
+
+  # 模拟A OOM
+
+- 源码使用无界缓存持有强引用的内存泄漏配合小堆
+
+  - ```java
+    List<byte[]> leakyList = new ArrayList<>();
+    while(true) {
+        leakyList.add(new byte[1024 * 1024]); // 每次1MB
+        Thread.sleep(100);
+    }
+    
+    // leakyList只加不减，对象一直被强引用，GC回收不掉
+    // 每次new byte[1MB]，快速打满堆内存
+    // -Xmx256m 小堆快速模拟
+    // HeapDumpOnOutOfMemoryError OOM时自动dump，方便MAT分析
+    ```
+
+  - 启动脚本
+
+    ```bash
+    .\run-oom.ps1
+    ```
+
+    
+
