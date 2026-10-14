@@ -1,0 +1,417 @@
+﻿2026-10-14 13:45:22
+Full thread dump OpenJDK 64-Bit Server VM (21.0.11+10-LTS mixed mode, sharing):
+
+Threads class SMR info:
+_java_thread_list=0x000001ffff1c4a20, length=41, elements={
+0x000001ffea490330, 0x000001fffa62dcb0, 0x000001fffa62e710, 0x000001fffa631b40,
+0x000001fffa632800, 0x000001fffa634b90, 0x000001fffa641900, 0x000001fffa647e80,
+0x000001fffa648a50, 0x000001fffa799300, 0x000001fffa79a6b0, 0x000001fffa797230,
+0x000001fffa798c70, 0x000001fffa79a020, 0x000001fffa799990, 0x000001fffa7978c0,
+0x000001fffa797f50, 0x000001fffa7985e0, 0x000001fffa9dc1d0, 0x000001fffa9dbb40,
+0x000001fffa9ddc10, 0x000001fffa9dd580, 0x000001fffa9de2a0, 0x000001fffa9dc860,
+0x000001fffa9dae20, 0x000001fffa9de930, 0x000001fffa9db4b0, 0x000001fffa9defc0,
+0x000001fffa9df650, 0x000001fffa9dfce0, 0x000001fffa9e0370, 0x000001fffa9dcef0,
+0x000001fffa9e1db0, 0x000001fffa9e2440, 0x000001fffa9e0a00, 0x000001fffa9e1090,
+0x000001fffa9e1720, 0x000001fffaa1fdb0, 0x000001fffaa20440, 0x000001fffaa20ad0,
+0x000001fffaa217f0
+}
+
+"main" #1 [26100] prio=5 os_prio=0 cpu=234.38ms elapsed=40.48s tid=0x000001ffea490330 nid=26100 in Object.wait()  [0x000000dc43ffe000]
+   java.lang.Thread.State: WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@21.0.11/Native Method)
+	- waiting on <0x000000008d50abd0> (a java.lang.Thread)
+	at java.lang.Object.wait(java.base@21.0.11/Object.java:366)
+	at java.lang.Thread.join(java.base@21.0.11/Thread.java:2079)
+	- locked <0x000000008d50abd0> (a java.lang.Thread)
+	at java.lang.Thread.join(java.base@21.0.11/Thread.java:2155)
+	at com.pamir.dump.cases.Log4JCase.run(Log4JCase.java:28)
+	at com.pamir.dump.cases.Application.main(Application.java:66)
+
+"Reference Handler" #9 [35156] daemon prio=10 os_prio=2 cpu=0.00ms elapsed=40.43s tid=0x000001fffa62dcb0 nid=35156 waiting on condition  [0x000000dc447ff000]
+   java.lang.Thread.State: RUNNABLE
+	at java.lang.ref.Reference.waitForReferencePendingList(java.base@21.0.11/Native Method)
+	at java.lang.ref.Reference.processPendingReferences(java.base@21.0.11/Reference.java:246)
+	at java.lang.ref.Reference$ReferenceHandler.run(java.base@21.0.11/Reference.java:208)
+
+"Finalizer" #10 [27420] daemon prio=8 os_prio=1 cpu=0.00ms elapsed=40.43s tid=0x000001fffa62e710 nid=27420 in Object.wait()  [0x000000dc448ff000]
+   java.lang.Thread.State: WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@21.0.11/Native Method)
+	- waiting on <0x000000008d510230> (a java.lang.ref.NativeReferenceQueue$Lock)
+	at java.lang.Object.wait(java.base@21.0.11/Object.java:366)
+	at java.lang.Object.wait(java.base@21.0.11/Object.java:339)
+	at java.lang.ref.NativeReferenceQueue.await(java.base@21.0.11/NativeReferenceQueue.java:48)
+	at java.lang.ref.ReferenceQueue.remove0(java.base@21.0.11/ReferenceQueue.java:158)
+	at java.lang.ref.NativeReferenceQueue.remove(java.base@21.0.11/NativeReferenceQueue.java:89)
+	- locked <0x000000008d510230> (a java.lang.ref.NativeReferenceQueue$Lock)
+	at java.lang.ref.Finalizer$FinalizerThread.run(java.base@21.0.11/Finalizer.java:173)
+
+"Signal Dispatcher" #11 [13960] daemon prio=9 os_prio=2 cpu=0.00ms elapsed=40.43s tid=0x000001fffa631b40 nid=13960 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Attach Listener" #12 [26428] daemon prio=5 os_prio=2 cpu=0.00ms elapsed=40.43s tid=0x000001fffa632800 nid=26428 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Service Thread" #13 [8040] daemon prio=9 os_prio=0 cpu=0.00ms elapsed=40.43s tid=0x000001fffa634b90 nid=8040 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Monitor Deflation Thread" #14 [38448] daemon prio=9 os_prio=0 cpu=0.00ms elapsed=40.43s tid=0x000001fffa641900 nid=38448 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"C2 CompilerThread0" #15 [16256] daemon prio=9 os_prio=2 cpu=656.25ms elapsed=40.43s tid=0x000001fffa647e80 nid=16256 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+   No compile task
+
+"C1 CompilerThread0" #18 [30560] daemon prio=9 os_prio=2 cpu=78.12ms elapsed=40.43s tid=0x000001fffa648a50 nid=30560 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+   No compile task
+
+"Notification Thread" #19 [35324] daemon prio=9 os_prio=0 cpu=0.00ms elapsed=40.41s tid=0x000001fffa799300 nid=35324 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Common-Cleaner" #20 [19852] daemon prio=8 os_prio=1 cpu=0.00ms elapsed=40.41s tid=0x000001fffa79a6b0 nid=19852 waiting on condition  [0x000000dc450ff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.11/Native Method)
+	- parking to wait for  <0x000000008d51af58> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.11/LockSupport.java:269)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.11/AbstractQueuedSynchronizer.java:1886)
+	at java.lang.ref.ReferenceQueue.await(java.base@21.0.11/ReferenceQueue.java:71)
+	at java.lang.ref.ReferenceQueue.remove0(java.base@21.0.11/ReferenceQueue.java:143)
+	at java.lang.ref.ReferenceQueue.remove(java.base@21.0.11/ReferenceQueue.java:218)
+	at jdk.internal.ref.CleanerImpl.run(java.base@21.0.11/CleanerImpl.java:140)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+	at jdk.internal.misc.InnocuousThread.run(java.base@21.0.11/InnocuousThread.java:186)
+
+"waiting-log4j-t0" #21 [32176] prio=5 os_prio=0 cpu=1531.25ms elapsed=40.25s tid=0x000001fffa797230 nid=32176 runnable  [0x000000dc453fe000]
+   java.lang.Thread.State: RUNNABLE
+	at org.apache.log4j.Category.callAppenders(Category.java:202)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t1" #22 [35568] prio=5 os_prio=0 cpu=1406.25ms elapsed=40.25s tid=0x000001fffa798c70 nid=35568 waiting for monitor entry  [0x000000dc454ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t2" #23 [17228] prio=5 os_prio=0 cpu=1625.00ms elapsed=40.25s tid=0x000001fffa79a020 nid=17228 waiting for monitor entry  [0x000000dc455ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t3" #24 [27588] prio=5 os_prio=0 cpu=1609.38ms elapsed=40.25s tid=0x000001fffa799990 nid=27588 waiting for monitor entry  [0x000000dc456ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t4" #25 [18512] prio=5 os_prio=0 cpu=1640.62ms elapsed=40.25s tid=0x000001fffa7978c0 nid=18512 waiting for monitor entry  [0x000000dc457ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t5" #26 [37516] prio=5 os_prio=0 cpu=1468.75ms elapsed=40.25s tid=0x000001fffa797f50 nid=37516 waiting for monitor entry  [0x000000dc458ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t6" #27 [7040] prio=5 os_prio=0 cpu=1750.00ms elapsed=40.25s tid=0x000001fffa7985e0 nid=7040 waiting for monitor entry  [0x000000dc459fe000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t7" #28 [24688] prio=5 os_prio=0 cpu=1234.38ms elapsed=40.25s tid=0x000001fffa9dc1d0 nid=24688 waiting for monitor entry  [0x000000dc45aff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t8" #29 [9968] prio=5 os_prio=0 cpu=1625.00ms elapsed=40.25s tid=0x000001fffa9dbb40 nid=9968 waiting for monitor entry  [0x000000dc45bff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t9" #30 [16648] prio=5 os_prio=0 cpu=1515.62ms elapsed=40.25s tid=0x000001fffa9ddc10 nid=16648 waiting for monitor entry  [0x000000dc45cff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t10" #31 [19712] prio=5 os_prio=0 cpu=1140.62ms elapsed=40.24s tid=0x000001fffa9dd580 nid=19712 waiting for monitor entry  [0x000000dc45dff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t11" #32 [33584] prio=5 os_prio=0 cpu=1234.38ms elapsed=40.24s tid=0x000001fffa9de2a0 nid=33584 waiting for monitor entry  [0x000000dc45eff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t12" #33 [19320] prio=5 os_prio=0 cpu=1796.88ms elapsed=40.24s tid=0x000001fffa9dc860 nid=19320 waiting for monitor entry  [0x000000dc45fff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t13" #34 [4436] prio=5 os_prio=0 cpu=1375.00ms elapsed=40.24s tid=0x000001fffa9dae20 nid=4436 waiting for monitor entry  [0x000000dc460fe000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t14" #35 [38536] prio=5 os_prio=0 cpu=1484.38ms elapsed=40.24s tid=0x000001fffa9de930 nid=38536 waiting for monitor entry  [0x000000dc461ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t15" #36 [18732] prio=5 os_prio=0 cpu=1625.00ms elapsed=40.24s tid=0x000001fffa9db4b0 nid=18732 waiting for monitor entry  [0x000000dc462ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t16" #37 [15572] prio=5 os_prio=0 cpu=1453.12ms elapsed=40.24s tid=0x000001fffa9defc0 nid=15572 waiting for monitor entry  [0x000000dc463ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t17" #38 [7628] prio=5 os_prio=0 cpu=1750.00ms elapsed=40.24s tid=0x000001fffa9df650 nid=7628 waiting for monitor entry  [0x000000dc464ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t18" #39 [15504] prio=5 os_prio=0 cpu=1500.00ms elapsed=40.24s tid=0x000001fffa9dfce0 nid=15504 waiting for monitor entry  [0x000000dc465ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t19" #40 [30968] prio=5 os_prio=0 cpu=1765.62ms elapsed=40.24s tid=0x000001fffa9e0370 nid=30968 waiting for monitor entry  [0x000000dc466ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t20" #41 [25140] prio=5 os_prio=0 cpu=1390.62ms elapsed=40.24s tid=0x000001fffa9dcef0 nid=25140 waiting for monitor entry  [0x000000dc467ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t21" #42 [23988] prio=5 os_prio=0 cpu=1234.38ms elapsed=40.24s tid=0x000001fffa9e1db0 nid=23988 waiting for monitor entry  [0x000000dc468ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t22" #43 [6504] prio=5 os_prio=0 cpu=1421.88ms elapsed=40.24s tid=0x000001fffa9e2440 nid=6504 waiting for monitor entry  [0x000000dc469fe000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t23" #44 [37796] prio=5 os_prio=0 cpu=1500.00ms elapsed=40.24s tid=0x000001fffa9e0a00 nid=37796 waiting for monitor entry  [0x000000dc46afe000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t24" #45 [19724] prio=5 os_prio=0 cpu=1250.00ms elapsed=40.24s tid=0x000001fffa9e1090 nid=19724 waiting for monitor entry  [0x000000dc46bff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t25" #46 [5536] prio=5 os_prio=0 cpu=1640.62ms elapsed=40.24s tid=0x000001fffa9e1720 nid=5536 waiting for monitor entry  [0x000000dc46cff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t26" #47 [4756] prio=5 os_prio=0 cpu=1437.50ms elapsed=40.24s tid=0x000001fffaa1fdb0 nid=4756 waiting for monitor entry  [0x000000dc46dff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t27" #48 [9708] prio=5 os_prio=0 cpu=1375.00ms elapsed=40.24s tid=0x000001fffaa20440 nid=9708 waiting for monitor entry  [0x000000dc46eff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t28" #49 [36728] prio=5 os_prio=0 cpu=1281.25ms elapsed=40.24s tid=0x000001fffaa20ad0 nid=36728 waiting for monitor entry  [0x000000dc46fff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- locked <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"waiting-log4j-t29" #50 [38540] prio=5 os_prio=0 cpu=1156.25ms elapsed=40.24s tid=0x000001fffaa217f0 nid=38540 waiting for monitor entry  [0x000000dc470ff000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at org.apache.log4j.Category.callAppenders(Category.java:204)
+	- waiting to lock <0x000000008d5157a0> (a org.apache.log4j.spi.RootLogger)
+	at org.apache.log4j.Category.forcedLog(Category.java:391)
+	at org.apache.log4j.Category.debug(Category.java:260)
+	at com.pamir.dump.cases.Log4JCase$1.run(Log4JCase.java:20)
+	at java.lang.Thread.runWith(java.base@21.0.11/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.11/Thread.java:1583)
+
+"GC Thread#9" os_prio=2 cpu=0.00ms elapsed=39.35s tid=0x000001ffff1c4de0 nid=28244 runnable  
+
+"GC Thread#8" os_prio=2 cpu=0.00ms elapsed=39.35s tid=0x000001ffff1c4620 nid=31712 runnable  
+
+"GC Thread#7" os_prio=2 cpu=0.00ms elapsed=39.35s tid=0x000001ffd06de3a0 nid=23324 runnable  
+
+"GC Thread#6" os_prio=2 cpu=0.00ms elapsed=39.35s tid=0x000001ffd06ddbe0 nid=36412 runnable  
+
+"GC Thread#5" os_prio=2 cpu=0.00ms elapsed=39.35s tid=0x000001ffd061d740 nid=14188 runnable  
+
+"GC Thread#4" os_prio=2 cpu=0.00ms elapsed=39.35s tid=0x000001ffd18a3730 nid=38548 runnable  
+
+"GC Thread#3" os_prio=2 cpu=0.00ms elapsed=39.35s tid=0x000001ffd18a3380 nid=26192 runnable  
+
+"GC Thread#2" os_prio=2 cpu=15.62ms elapsed=39.35s tid=0x000001ffd0fce960 nid=24496 runnable  
+
+"GC Thread#1" os_prio=2 cpu=15.62ms elapsed=39.35s tid=0x000001ffd06468d0 nid=11200 runnable  
+
+"VM Thread" os_prio=2 cpu=0.00ms elapsed=40.45s tid=0x000001fffa60f9a0 nid=31044 runnable  
+
+"VM Periodic Task Thread" os_prio=2 cpu=31.25ms elapsed=40.46s tid=0x000001fffa5fe350 nid=17396 waiting on condition  
+
+"G1 Service" os_prio=2 cpu=0.00ms elapsed=40.48s tid=0x000001fffa4c8f40 nid=28764 runnable  
+
+"G1 Refine#0" os_prio=2 cpu=0.00ms elapsed=40.48s tid=0x000001fffa4c85b0 nid=34360 runnable  
+
+"G1 Main Marker" os_prio=2 cpu=0.00ms elapsed=40.48s tid=0x000001ffec8db350 nid=23608 runnable  
+
+"G1 Conc#0" os_prio=2 cpu=0.00ms elapsed=40.48s tid=0x000001ffec8dcce0 nid=38268 runnable  
+
+"GC Thread#0" os_prio=2 cpu=15.62ms elapsed=40.48s tid=0x000001ffec8cb820 nid=2488 runnable  
+
+JNI global refs: 9, weak refs: 0
+

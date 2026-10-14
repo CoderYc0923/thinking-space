@@ -151,8 +151,8 @@
 ### 5.3 本阶段产出笔记
 
 - ✅ `jvm排查/diagnostic-lab实操与JVM原理.md`（三场景实操 + 原理）
+- ✅ `jvm排查/jvm-dump-usecases实操教程.md`（扩展病例库）
 - 待写：`Arthas常用命令速查.md`
-- 待写：扩展病例（jvm-dump-usecases）
 
 ---
 
@@ -258,6 +258,7 @@
 | `MQ可靠性与幂等.md` | 待写 | 阶段 2 |
 | `本地消息表与最终一致性.md` | 待写 | 阶段 2 |
 | `jvm排查/diagnostic-lab实操与JVM原理.md` | ✅ | 阶段 3 |
+| `jvm排查/jvm-dump-usecases实操教程.md` | ✅ | 阶段 3 |
 | `Arthas常用命令速查.md` | 待写 | 阶段 3 |
 | `可观测性与K8s基础.md` | 待写 | 阶段 4 |
 

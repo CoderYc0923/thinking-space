@@ -1,6 +1,13 @@
 # Heap dumps and MAT analysis artifacts (too large for GitHub)
 *.hprof
 diagnostics/oomdump*
+diagnostics/usecases/
+diagnostics/threads.txt
 !diagnostics/oom-jvm.md
-!diagnostics/run-oom.ps1
-!diagnostics/run-oom.cmd
+!diagnostics/*.md
+!diagnostics/run-*.ps1
+!diagnostics/run-*.cmd
+
+# Nested cloned repos keep their own .git; ignore heavy build outputs if tracked by mistake
+jvm-dump-usecases/target/
+diagnostic-lab/target/
