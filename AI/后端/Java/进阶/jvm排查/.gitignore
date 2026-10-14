@@ -3,6 +3,9 @@
 diagnostics/oomdump*
 diagnostics/usecases/
 diagnostics/threads.txt
+diagnostics/log4j.log/
+*.log
+*.out
 !diagnostics/oom-jvm.md
 !diagnostics/*.md
 !diagnostics/run-*.ps1
