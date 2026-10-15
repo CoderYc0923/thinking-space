@@ -149,6 +149,8 @@ docker run -it --rm jvm-dump-cases Deadlock
 
 ### 第 3 周：资源与池化（选做，很像线上）
 
+实操笔记（启动 / 采证 / 口述 / 线上命令）：→ [diagnostics/pool-resource-jvm.md](./diagnostics/pool-resource-jvm.md)
+
 | Case | 线上味道 |
 |------|----------|
 | `ThreadLeak` | 线程只建不关 |
