@@ -132,6 +132,8 @@ docker run -it --rm jvm-dump-cases Deadlock
 
 ### 第 2 周：内存与 GC（必做）
 
+实操笔记（启动 / 采证 / 口述）：→ [diagnostics/oom-jvm.md](./diagnostics/oom-jvm.md)
+
 | 顺序 | Case | 和 lab 对比 |
 |------|------|-------------|
 | 1 | `MemoryLeak` | 同「强引用挂住」思路，换仓库再跑一遍 MAT |
