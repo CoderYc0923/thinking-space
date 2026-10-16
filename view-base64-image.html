@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Base64 图片查看 / 保存</title>
+  <style>
+    body { font-family: sans-serif; max-width: 960px; margin: 24px auto; padding: 0 16px; }
+    textarea { width: 100%; height: 160px; font-family: monospace; font-size: 12px; }
+    button { margin: 8px 8px 8px 0; padding: 8px 16px; cursor: pointer; }
+    img { max-width: 100%; border: 1px solid #ccc; margin-top: 16px; }
+    .err { color: #c00; }
+  </style>
+</head>
+<body>
+  <h1>Base64 图片查看 / 保存</h1>
+  <p>把 <code>data:image/png;base64,...</code> 或纯 base64 粘贴到下面，点按钮即可。</p>
+  <textarea id="t" placeholder="粘贴 data:image/...;base64,...."></textarea>
+  <div>
+    <button type="button" onclick="preview()">预览</button>
+    <button type="button" onclick="downloadImg()">下载 PNG</button>
+  </div>
+  <p id="msg"></p>
+  <img id="i" alt="预览" />
+  <script>
+    function normalize(raw) {
+      let s = raw.trim().replace(/^['"]|['"]$/g, '');
+      if (!s) throw new Error('内容为空');
+      if (!s.startsWith('data:')) {
+        s = 'data:image/png;base64,' + s;
+      }
+      return s;
+    }
+    function preview() {
+      const msg = document.getElementById('msg');
+      try {
+        const s = normalize(document.getElementById('t').value);
+        document.getElementById('i').src = s;
+        msg.textContent = '预览已更新';
+        msg.className = '';
+      } catch (e) {
+        msg.textContent = e.message;
+        msg.className = 'err';
+      }
+    }
+    function downloadImg() {
+      const msg = document.getElementById('msg');
+      try {
+        const s = normalize(document.getElementById('t').value);
+        const a = document.createElement('a');
+        a.href = s;
+        a.download = 'image.png';
+        a.click();
+        msg.textContent = '已触发下载';
+        msg.className = '';
+      } catch (e) {
+        msg.textContent = e.message;
+        msg.className = 'err';
+      }
+    }
+  </script>
+</body>
+</html>
