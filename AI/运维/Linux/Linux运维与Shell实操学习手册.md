@@ -260,6 +260,43 @@ iostat -x 1 5   # 磁盘 IO 详情（需 sysstat）
 ```
 
 > **负载判断口诀**：`load average` 对比 CPU 核数（`nproc`）。1 分钟负载持续 > 核数，说明存在排队。
+>
+> 先看`top`里面有`load average：1分钟，5分钟，15分钟`，在和服务器核数`nproc`对比
+>
+> 若高则先看是CPU：`top`还是IO `iostat -x l`
+>
+> ![image-20261116095634890](.\image-20261116095634890.png)
+>
+> - 其中IO中的字段：
+>
+>   - 业务耗CPU看`%user`；频繁磁盘、网络、锁看`%system`；load高、cpu低看`%iowait`；机器超配，偷资源看`%steal`；空闲看`%idle`
+>   - Device 磁盘设备（-x 扩展字段，最核心）
+>     - 读QPS看`r/s`
+>     - 写QPS看`w/s`
+>     - 读流量看`rKB/s`
+>     - 写流量看`wKB/s`
+>     - 大块读写还是随机小IO看`avgrq-sz`
+>     - 队列长短/堵的厉不厉害看`avgqu-sz`
+>     - 包含队列排队+磁盘实际处理时间看`await`，正常小于5ms，大于10ms就慢了
+>     - 读慢看`r_await`
+>     - 写慢看`w_await`
+>
+> - 服务器的状态看了之后要再细分到某个进程
+>
+>   - ```bash
+>     #方式1 先看所有PID的IO
+>     pidstat -d 1
+>     
+>     #方式2 看某个进程PID的IO
+>     pgrep -af java # 找到进程PID
+>     pidstat -d -p <pid> 1
+>     
+>     # 均输出字段
+>     UID PID KB_rd/s（进程每秒读KB） KB_wr/s（进程每秒写KB） KB_ccwr/s（取消不刷盘的 KB，若高就是程序大量写缓存页又马上丢弃） iodelay（IO阻塞延迟，若高就是它在卡IO）
+>     
+>     ```
+>
+>   - 
 
 ### 5.3 端口与网络
 
@@ -322,6 +359,9 @@ sudo systemctl status nginx      # 状态 + 最近日志
 sudo systemctl enable nginx      # 开机自启
 sudo systemctl disable nginx     # 关闭自启
 systemctl list-units --type=service --state=running   # 正在运行的服务
+
+# 修改完nginx配置时重载命令
+nginx -t
 ```
 
 ### 6.3 日志排查
