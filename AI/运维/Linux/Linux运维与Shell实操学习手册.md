@@ -286,14 +286,14 @@ iostat -x 1 5   # 磁盘 IO 详情（需 sysstat）
 >   - ```bash
 >     #方式1 先看所有PID的IO
 >     pidstat -d 1
->     
+>         
 >     #方式2 看某个进程PID的IO
 >     pgrep -af java # 找到进程PID
 >     pidstat -d -p <pid> 1
->     
+>         
 >     # 均输出字段
 >     UID PID KB_rd/s（进程每秒读KB） KB_wr/s（进程每秒写KB） KB_ccwr/s（取消不刷盘的 KB，若高就是程序大量写缓存页又马上丢弃） iodelay（IO阻塞延迟，若高就是它在卡IO）
->     
+>         
 >     ```
 >
 >   - 
@@ -737,6 +737,7 @@ graph LR
 | 测试接口 | `curl -o /dev/null -s -w "%{http_code}\n" URL` |
 | 打包备份 | `tar -zcvf xxx.tar.gz /path` |
 | 定时任务 | `crontab -e` / `crontab -l` |
+| 错误输出丢掉 | `2>/dev/null` |
 
 ---
 
